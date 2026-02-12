@@ -1,0 +1,25 @@
+# ===== Dependencies =====
+app/node_modules/
+
+# ===== Build Output =====
+app/dist/
+
+# ===== Logs =====
+*.log
+npm-debug.log*
+
+# ===== Environment Files =====
+.env
+.env.local
+.env.*.local
+
+# ===== IDE =====
+.vscode/
+.idea/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Coverage =====
+coverage/
