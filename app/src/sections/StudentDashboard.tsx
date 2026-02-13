@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import type { Classroom } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,20 +24,26 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
     currentUser, 
     logout, 
     joinClassroom, 
-    getStudentClassrooms, 
-    getClassroomById,
-    hasStudentSubmittedFeedback,
-    hasStudentAttemptedQuiz,
-    getQuizAttempt
+    getStudentClassrooms
   } = useAuth();
   
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [classroomCode, setClassroomCode] = useState('');
+  const [studentClassrooms, setStudentClassrooms] = useState<Classroom[]>([]);
 
-  const studentClassroomIds = currentUser ? getStudentClassrooms(currentUser.id).map(c => c.id) : [];
-  const studentClassrooms = studentClassroomIds.map(id => getClassroomById(id)).filter(Boolean);
+  useEffect(() => {
+    const loadClassrooms = async () => {
+      if (!currentUser) {
+        setStudentClassrooms([]);
+        return;
+      }
+      const classrooms = await getStudentClassrooms();
+      setStudentClassrooms(classrooms);
+    };
+    loadClassrooms();
+  }, [currentUser, getStudentClassrooms]);
 
-  const handleJoinClassroom = () => {
+  const handleJoinClassroom = async () => {
     if (!classroomCode.trim()) {
       toast.error('Please enter a classroom code');
       return;
@@ -47,37 +54,30 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
       return;
     }
 
-    const result = joinClassroom(classroomCode.toUpperCase(), currentUser.id);
+    const result = await joinClassroom(classroomCode.toUpperCase());
     if (result.success) {
       toast.success(result.message);
       setClassroomCode('');
       setIsJoinDialogOpen(false);
+      // Reload classrooms
+      const classrooms = await getStudentClassrooms();
+      setStudentClassrooms(classrooms);
     } else {
       toast.error(result.message);
     }
   };
 
-  const getPendingQuizzes = (classroomId: string) => {
-    const classroom = getClassroomById(classroomId);
-    if (!classroom || !currentUser) return 0;
-    return classroom.quizzes.filter(q => !hasStudentAttemptedQuiz(classroomId, q.id, currentUser.id)).length;
+  // Quiz and feedback features temporarily disabled
+  const getPendingQuizzes = (_classroomId: string) => {
+    return 0;
   };
 
-  const getCompletedQuizzes = (classroomId: string) => {
-    const classroom = getClassroomById(classroomId);
-    if (!classroom || !currentUser) return 0;
-    return classroom.quizzes.filter(q => hasStudentAttemptedQuiz(classroomId, q.id, currentUser.id)).length;
+  const getCompletedQuizzes = (_classroomId: string) => {
+    return 0;
   };
 
-  const getTotalQuizScore = (classroomId: string) => {
-    const classroom = getClassroomById(classroomId);
-    if (!classroom || !currentUser) return 0;
-    
-    const attempts = classroom.quizAttempts.filter(a => a.studentId === currentUser.id);
-    if (attempts.length === 0) return 0;
-    
-    const total = attempts.reduce((sum, a) => sum + (a.score / a.totalQuestions) * 100, 0);
-    return Math.round(total / attempts.length);
+  const getTotalQuizScore = (_classroomId: string) => {
+    return 0;
   };
 
   return (
@@ -130,7 +130,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Feedback Done</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {studentClassrooms.filter(c => hasStudentSubmittedFeedback(c!.id, currentUser!.id)).length}
+                    0
                   </p>
                 </div>
               </div>
@@ -236,8 +236,8 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {studentClassrooms.map((classroom) => {
-              if (!classroom) return null;
-              const feedbackSubmitted = hasStudentSubmittedFeedback(classroom.id, currentUser!.id);
+              // Quiz and feedback features temporarily disabled
+              const feedbackSubmitted = false;
               const pendingQuizzes = getPendingQuizzes(classroom.id);
               const completedQuizzes = getCompletedQuizzes(classroom.id);
               const avgScore = getTotalQuizScore(classroom.id);
@@ -320,26 +320,14 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                     {classroom.quizzes.length > 0 && (
                       <div className="mb-4 space-y-2">
                         {classroom.quizzes.slice(0, 2).map((quiz) => {
-                          const hasAttempted = hasStudentAttemptedQuiz(classroom.id, quiz.id, currentUser!.id);
-                          const attempt = getQuizAttempt(classroom.id, quiz.id, currentUser!.id);
-                          
+                          // Quiz attempt features temporarily disabled
                           return (
                             <div key={quiz.id} className="flex items-center justify-between p-2 rounded-lg text-sm" style={{ background: '#E7E6E1' }}>
                               <div className="flex items-center gap-2">
-                                {hasAttempted ? (
-                                  <Crown className="w-4 h-4" style={{ color: '#537791' }} />
-                                ) : (
-                                  <FileQuestion className="w-4 h-4" style={{ color: '#C1C0B9' }} />
-                                )}
+                                <FileQuestion className="w-4 h-4" style={{ color: '#C1C0B9' }} />
                                 <span className="truncate max-w-[120px]" style={{ color: '#537791' }}>{quiz.title}</span>
                               </div>
-                              {hasAttempted && attempt ? (
-                                <span className="text-xs font-medium" style={{ color: '#537791' }}>
-                                  {Math.round((attempt.score / attempt.totalQuestions) * 100)}%
-                                </span>
-                              ) : (
-                                <span className="text-xs" style={{ color: '#C1C0B9' }}>{quiz.questions.length} Qs</span>
-                              )}
+                              <span className="text-xs" style={{ color: '#C1C0B9' }}>{quiz.questions.length} Qs</span>
                             </div>
                           );
                         })}

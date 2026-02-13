@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import type { Classroom } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { 
   ArrowLeft, Users, User, MessageCircle, CheckCircle, Star, BarChart3,
-  GraduationCap, BookOpen, ClipboardList, Target, Award, Flame, Zap, Trophy, Timer, AlertCircle,
+  GraduationCap, BookOpen, ClipboardList, Target, Award, Flame, Zap, Timer, AlertCircle,
   ListOrdered, Clock, MessageSquare, TrendingUp, UserCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,29 +25,41 @@ interface ClassroomPageProps {
 
 export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const { 
-    currentUser, 
-    getClassroomById, 
-    submitFeedback,
-    submitQuizAttempt,
-    hasStudentSubmittedFeedback,
-    hasStudentAttemptedQuiz,
-    getQuizAttempt,
-    users
+    currentUser,
+    getTeacherClassrooms,
+    getStudentClassrooms
   } = useAuth();
   
-  // Feedback form state
+  // Feedback form state (disabled)
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [comment, setComment] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   
-  // Quiz state
+  // Quiz state (disabled)
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
   const [quizTimeLeft, setQuizTimeLeft] = useState(0);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
-  const classroom = getClassroomById(classroomId);
+  const [classroom, setClassroom] = useState<Classroom | null>(null);
+  useEffect(() => {
+    const load = async () => {
+      if (!currentUser) return;
+      
+      let classrooms: Classroom[] = [];
+      if (currentUser.role === 'teacher') {
+        classrooms = await getTeacherClassrooms();
+      } else {
+        classrooms = await getStudentClassrooms();
+      }
+      
+      const found = classrooms.find(c => c.id === classroomId);
+      setClassroom(found || null);
+    };
+    load();
+  }, [classroomId, currentUser, getTeacherClassrooms, getStudentClassrooms]);
+
 
   // Initialize answers when classroom loads
   useEffect(() => {
@@ -94,14 +106,13 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   const isTeacher = currentUser.role === 'teacher';
   const isStudent = currentUser.role === 'student';
-  const hasSubmittedFeedbackStatus = hasStudentSubmittedFeedback(classroomId, currentUser.id);
+  // Feedback and quiz features temporarily disabled
+  const hasSubmittedFeedbackStatus = false;
   const isEnrolled = classroom.students.includes(currentUser.id);
 
   const getStudentNames = () => {
-    return classroom.students.map(id => {
-      const student = users.find(u => u.id === id);
-      return student ? student.name : 'Unknown';
-    });
+    // Student names feature temporarily disabled
+    return classroom.students.map((_, index) => `Student ${index + 1}`);
   };
 
   const handleAnswerChange = (questionId: string, value: number[]) => {
@@ -109,26 +120,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const handleSubmitFeedback = async () => {
-    if (hasSubmittedFeedbackStatus) {
-      toast.error('You have already submitted feedback for this classroom');
-      return;
-    }
-
-    setIsSubmittingFeedback(true);
-    
-    const result = submitFeedback(
-      classroomId,
-      currentUser.id,
-      answers,
-      comment
-    );
-
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
-    
+    // Feedback submission temporarily disabled
+    toast.error('Feedback feature is temporarily unavailable');
     setIsSubmittingFeedback(false);
   };
 
@@ -150,19 +143,11 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const handleSubmitQuiz = async () => {
+    // Quiz submission temporarily disabled
     if (!activeQuiz) return;
     
     setIsSubmittingQuiz(true);
-    
-    const result = submitQuizAttempt(classroomId, activeQuiz, currentUser.id, quizAnswers);
-    
-    if (result.success) {
-      toast.success(result.message);
-      setQuizCompleted(true);
-    } else {
-      toast.error(result.message);
-    }
-    
+    toast.error('Quiz feature is temporarily unavailable');
     setIsSubmittingQuiz(false);
     setActiveQuiz(null);
   };
@@ -851,37 +836,18 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {classroom.quizzes.map((quiz) => {
-                    const hasAttempted = hasStudentAttemptedQuiz(classroom.id, quiz.id, currentUser.id);
-                    const attempt = getQuizAttempt(classroom.id, quiz.id, currentUser.id);
-                    
+                    // Quiz attempt features temporarily disabled
                     return (
                       <Card key={quiz.id} className="border-0 shadow-lg overflow-hidden" style={{ background: '#F7F6E7' }}>
-                        <CardHeader style={{ background: hasAttempted ? '#E7E6E1' : '#E7E6E1' }}>
+                        <CardHeader style={{ background: '#E7E6E1' }}>
                           <div className="flex items-start justify-between">
                             <div>
                               <CardTitle className="flex items-center gap-2 text-lg" style={{ color: '#537791' }}>
-                                {hasAttempted ? (
-                                  <Trophy className="w-5 h-5" style={{ color: '#537791' }} />
-                                ) : (
-                                  <Target className="w-5 h-5" style={{ color: '#537791' }} />
-                                )}
+                                <Target className="w-5 h-5" style={{ color: '#537791' }} />
                                 {quiz.title}
                               </CardTitle>
                               <CardDescription style={{ color: '#C1C0B9' }}>{quiz.description}</CardDescription>
                             </div>
-                            {hasAttempted && attempt && (
-                              <Badge className="border-0" 
-                                     style={{ 
-                                       background: (attempt.score / attempt.totalQuestions) * 100 >= 70 
-                                         ? '#537791' 
-                                         : (attempt.score / attempt.totalQuestions) * 100 >= 50
-                                           ? '#6a8fa3'
-                                           : '#a39e93',
-                                       color: 'white'
-                                     }}>
-                                {Math.round((attempt.score / attempt.totalQuestions) * 100)}%
-                              </Badge>
-                            )}
                           </div>
                         </CardHeader>
                         <CardContent className="p-6">
@@ -896,32 +862,14 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                             </span>
                           </div>
                           
-                          {hasAttempted && attempt ? (
-                            <div className="p-4 rounded-lg" style={{ background: '#E7E6E1' }}>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm" style={{ color: '#C1C0B9' }}>Your Score</span>
-                                <span className="text-lg font-bold" style={{ color: '#537791' }}>
-                                  {attempt.score}/{attempt.totalQuestions}
-                                </span>
-                              </div>
-                              <Progress 
-                                value={(attempt.score / attempt.totalQuestions) * 100} 
-                                className="h-2"
-                              />
-                              <p className="text-xs mt-2" style={{ color: '#C1C0B9' }}>
-                                Completed on {format(new Date(attempt.submittedAt), 'MMM d, yyyy')}
-                              </p>
-                            </div>
-                          ) : (
-                            <Button 
-                              onClick={() => startQuiz(quiz.id)}
-                              className="w-full text-white"
-                              style={{ background: '#537791' }}
-                            >
-                              <Zap className="w-4 h-4 mr-2" />
-                              Start Quiz
-                            </Button>
-                          )}
+                          <Button 
+                            onClick={() => startQuiz(quiz.id)}
+                            className="w-full text-white"
+                            style={{ background: '#537791' }}
+                          >
+                            <Zap className="w-4 h-4 mr-2" />
+                            Start Quiz
+                          </Button>
                         </CardContent>
                       </Card>
                     );

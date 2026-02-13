@@ -23,22 +23,26 @@ export function LoginRegister() {
   const [role, setRole] = useState<'teacher' | 'student'>('student');
   const [name, setName] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!loginEmail || !loginPassword) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-    
-    const result = login(loginEmail, loginPassword);
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
-  };
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleRegister = (e: React.FormEvent) => {
+  if (!loginEmail || !loginPassword) {
+    toast.error('Please fill in all fields');
+    return;
+  }
+
+  const result = await login(loginEmail, loginPassword);
+
+  if (result.success) {
+    toast.success(result.message);
+  } else {
+    toast.error(result.message);
+  }
+};
+
+    
+
+const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!registerEmail || !registerPassword || !confirmPassword) {
       toast.error('Please fill in all fields');
@@ -55,7 +59,7 @@ export function LoginRegister() {
       return;
     }
     
-    const result = register(registerEmail, registerPassword, role, name);
+    const result = await register(registerEmail, registerPassword, role, name);
     if (result.success) {
       toast.success(result.message);
     } else {
@@ -108,7 +112,7 @@ export function LoginRegister() {
                       <Input
                         id="login-email"
                         type="email"
-                        placeholder="your.email@gmail.com"
+                        placeholder="email@gmail.com"
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="pl-10 border-0 focus:ring-2"
@@ -177,7 +181,7 @@ export function LoginRegister() {
                       <Input
                         id="register-email"
                         type="email"
-                        placeholder="your.email@gmail.com"
+                        placeholder="youremail@gmail.com"
                         value={registerEmail}
                         onChange={(e) => setRegisterEmail(e.target.value)}
                         className="pl-10 border-0 focus:ring-2"

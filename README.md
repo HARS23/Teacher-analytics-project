@@ -46,7 +46,13 @@ cd Teacher-analytics-project
 
 3. Start the development server
 ```bash
-# Run the application
+From the app directory:
+
+Install dependencies: npm install
+Start dev server: npm run dev
+Build for production: npm run build
+Preview build: npm run preview
+The app runs on localhost:5173 by default (Vite's dev server).
 ```
 
 
@@ -59,23 +65,18 @@ cd Teacher-analytics-project
 
 
 
-## 📖 Usage
+## 📖 How It Works
 
-[Add usage examples and code snippets here]
+1. User Registration/Login: New users register with email/password/role; existing users login
+2. Teacher Workflow: Create classrooms → Add feedback questions → Create quizzes → View analytics
+3. Student Workflow: Join classrooms → Submit feedback → Attempt quizzes
+4. Data Storage: Everything persists locally; no server required
+5. Navigation: App switches views based on auth state and user actions
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the project
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is unlicensed.
 
 ## 👨‍💻 Author
 
