@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import type { Classroom } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,11 +25,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
     currentUser, 
     logout, 
     createClassroom, 
-    getTeacherClassrooms, 
-    addFeedbackQuestion, 
-    removeFeedbackQuestion,
-    createQuiz,
-    users
+    getTeacherClassrooms
   } = useAuth();
   
   // Create classroom dialog
@@ -58,29 +55,43 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
   // Student list dialog
   const [isStudentListOpen, setIsStudentListOpen] = useState(false);
   const [selectedClassroomForStudents, setSelectedClassroomForStudents] = useState<string | null>(null);
+  const [teacherClassrooms, setTeacherClassrooms] = useState<Classroom[]>([]);
 
-  const teacherClassrooms = currentUser ? getTeacherClassrooms(currentUser.id) : [];
+  useEffect(() => {
+    const loadClassrooms = async () => {
+      if (!currentUser) {
+        setTeacherClassrooms([]);
+        return;
+      }
+      const classrooms = await getTeacherClassrooms();
+      setTeacherClassrooms(classrooms);
+    };
+    loadClassrooms();
+  }, [currentUser, getTeacherClassrooms]);
 
   const getStudentNames = (studentIds: string[]) => {
-    return studentIds.map(id => {
-      const student = users.find(u => u.id === id);
-      return student ? student.name : 'Unknown';
-    });
+    // Student names feature temporarily disabled
+    return studentIds.map((_, index) => `Student ${index + 1}`);
   };
 
-  const handleCreateClassroom = () => {
+  const handleCreateClassroom = async () => {
     if (!newClassroomName.trim() || !newClassroomSubject.trim()) {
       toast.error('Please fill in classroom name and subject');
       return;
     }
 
-    const result = createClassroom(newClassroomName, newClassroomSubject, newClassroomDescription);
+    const result = await createClassroom(newClassroomName, newClassroomSubject, newClassroomDescription);
     if (result.success) {
       toast.success(result.message);
       setNewClassroomName('');
       setNewClassroomSubject('');
       setNewClassroomDescription('');
       setIsCreateDialogOpen(false);
+      // Reload classrooms
+      if (currentUser) {
+        const classrooms = await getTeacherClassrooms();
+        setTeacherClassrooms(classrooms);
+      }
     } else {
       toast.error(result.message);
     }
@@ -94,59 +105,18 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
   };
 
   const handleAddQuestion = () => {
-    if (!selectedClassroomForQuestion || !newQuestionText.trim()) {
-      toast.error('Please enter a question');
-      return;
-    }
-
-    const result = addFeedbackQuestion(selectedClassroomForQuestion, newQuestionText);
-    if (result.success) {
-      toast.success(result.message);
-      setNewQuestionText('');
-      setIsQuestionDialogOpen(false);
-    } else {
-      toast.error(result.message);
-    }
+    // Feedback question feature temporarily disabled
+    toast.error('Feedback question feature is temporarily unavailable');
   };
 
-  const handleRemoveQuestion = (classroomId: string, questionId: string) => {
-    const result = removeFeedbackQuestion(classroomId, questionId);
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
+  const handleRemoveQuestion = (_classroomId: string, _questionId: string) => {
+    // Feedback question feature temporarily disabled
+    toast.error('Feedback question feature is temporarily unavailable');
   };
 
   const handleCreateQuiz = () => {
-    if (!selectedClassroomForQuiz || !newQuizTitle.trim()) {
-      toast.error('Please enter a quiz title');
-      return;
-    }
-
-    if (quizQuestions.some(q => !q.text.trim() || q.options.some(o => !o.trim()))) {
-      toast.error('Please fill in all questions and options');
-      return;
-    }
-
-    const result = createQuiz(
-      selectedClassroomForQuiz,
-      newQuizTitle,
-      newQuizDescription,
-      quizQuestions,
-      newQuizTimeLimit
-    );
-
-    if (result.success) {
-      toast.success(result.message);
-      setNewQuizTitle('');
-      setNewQuizDescription('');
-      setNewQuizTimeLimit(15);
-      setQuizQuestions([{ text: '', options: ['', '', '', ''], correctAnswer: 0, order: 0 }]);
-      setIsQuizDialogOpen(false);
-    } else {
-      toast.error(result.message);
-    }
+    // Quiz creation feature temporarily disabled
+    toast.error('Quiz creation feature is temporarily unavailable');
   };
 
   const addQuizQuestionField = () => {
@@ -173,32 +143,32 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
   };
 
   const getAnalyticsData = (classroomId: string) => {
-    const classroom = teacherClassrooms.find(c => c.id === classroomId);
+    const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
     if (!classroom || classroom.feedbacks.length === 0) return [];
 
     const feedbacks = classroom.feedbacks;
 
-    const excellent = feedbacks.filter(f => {
+    const excellent = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 4.5;
     }).length;
     
-    const good = feedbacks.filter(f => {
+    const good = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 3.5 && avg < 4.5;
     }).length;
     
-    const average = feedbacks.filter(f => {
+    const average = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 2.5 && avg < 3.5;
     }).length;
     
-    const belowAverage = feedbacks.filter(f => {
+    const belowAverage = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg < 2.5;
     }).length;
 
@@ -207,28 +177,28 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
       { name: 'Good', value: good, color: '#6a8fa3' },
       { name: 'Average', value: average, color: '#C1C0B9' },
       { name: 'Below Average', value: belowAverage, color: '#a39e93' },
-    ].filter(item => item.value > 0);
+    ].filter((item) => item.value > 0);
   };
 
   const getAverageRating = (classroomId: string) => {
-    const classroom = teacherClassrooms.find(c => c.id === classroomId);
-    if (!classroom || classroom.feedbacks.length === 0) return 0;
+    const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
+    if (!classroom || classroom.feedbacks.length === 0) return '0';
 
-    const total = classroom.feedbacks.reduce((sum, f) => {
+    const total = classroom.feedbacks.reduce((sum: number, f) => {
       const answers = Object.values(f.answers);
-      return sum + answers.reduce((a, b) => a + b, 0) / answers.length;
+      return sum + answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
     }, 0);
     return (total / classroom.feedbacks.length).toFixed(1);
   };
 
   const getQuizAverageScore = (classroomId: string, quizId: string) => {
-    const classroom = teacherClassrooms.find(c => c.id === classroomId);
+    const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
     if (!classroom) return 0;
     
-    const attempts = classroom.quizAttempts.filter(a => a.quizId === quizId);
+    const attempts = classroom.quizAttempts.filter((a) => a.quizId === quizId);
     if (attempts.length === 0) return 0;
     
-    const total = attempts.reduce((sum, a) => sum + (a.score / a.totalQuestions) * 100, 0);
+    const total = attempts.reduce((sum: number, a) => sum + (a.score / a.totalQuestions) * 100, 0);
     return Math.round(total / attempts.length);
   };
 
@@ -283,7 +253,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Students</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {teacherClassrooms.reduce((sum, c) => sum + c.students.length, 0)}
+                    {teacherClassrooms.reduce((sum: number, c: Classroom) => sum + c.students.length, 0)}
                   </p>
                 </div>
               </div>
@@ -298,7 +268,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Feedback</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {teacherClassrooms.reduce((sum, c) => sum + c.feedbacks.length, 0)}
+                    {teacherClassrooms.reduce((sum: number, c: Classroom) => sum + c.feedbacks.length, 0)}
                   </p>
                 </div>
               </div>
@@ -313,7 +283,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Quizzes</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {teacherClassrooms.reduce((sum, c) => sum + c.quizzes.length, 0)}
+                    {teacherClassrooms.reduce((sum: number, c: Classroom) => sum + c.quizzes.length, 0)}
                   </p>
                 </div>
               </div>
@@ -760,7 +730,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                         <div className="space-y-2">
                           {classroom.quizzes.map((quiz) => {
                             const avgScore = getQuizAverageScore(classroom.id, quiz.id);
-                            const attemptCount = classroom.quizAttempts.filter(a => a.quizId === quiz.id).length;
+                            const attemptCount = classroom.quizAttempts.filter((a) => a.quizId === quiz.id).length;
                             
                             return (
                               <div key={quiz.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#E7E6E1' }}>

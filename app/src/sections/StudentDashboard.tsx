@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   GraduationCap, Users, BookOpen, ArrowRight, LogOut, CheckCircle, 
   Target, Lightbulb, Zap, MessageCircle, FileQuestion, 
-  CheckSquare, Hourglass, Trophy, Bookmark, Rocket, Crown, Gem,
+  CheckSquare, Hourglass, Trophy, Bookmark, Rocket, Gem,
   Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -145,7 +145,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Quizzes Taken</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {studentClassrooms.reduce((sum, c) => sum + getCompletedQuizzes(c!.id), 0)}
+                    {studentClassrooms.reduce((sum: number, c: Classroom) => sum + getCompletedQuizzes(c.id), 0)}
                   </p>
                 </div>
               </div>
@@ -161,7 +161,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Avg Score</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
                     {studentClassrooms.length > 0 
-                      ? Math.round(studentClassrooms.reduce((sum, c) => sum + getTotalQuizScore(c!.id), 0) / studentClassrooms.length)
+                      ? Math.round(studentClassrooms.reduce((sum: number, c: Classroom) => sum + getTotalQuizScore(c.id), 0) / studentClassrooms.length)
                       : 0}%
                   </p>
                 </div>

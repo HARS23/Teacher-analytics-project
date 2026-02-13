@@ -164,27 +164,27 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
     const feedbacks = classroom.feedbacks;
     
-    const excellent = feedbacks.filter(f => {
+    const excellent = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 4.5;
     }).length;
     
-    const good = feedbacks.filter(f => {
+    const good = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 3.5 && avg < 4.5;
     }).length;
     
-    const average = feedbacks.filter(f => {
+    const average = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 2.5 && avg < 3.5;
     }).length;
     
-    const belowAverage = feedbacks.filter(f => {
+    const belowAverage = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
-      const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+      const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg < 2.5;
     }).length;
 
@@ -193,14 +193,14 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
       { name: 'Good', value: good, color: '#6a8fa3' },
       { name: 'Average', value: average, color: '#C1C0B9' },
       { name: 'Below Average', value: belowAverage, color: '#a39e93' },
-    ].filter(item => item.value > 0);
+    ].filter((item) => item.value > 0);
   };
 
   const getQuestionAnalytics = () => {
     if (classroom.feedbacks.length === 0) return [];
 
     return classroom.feedbackQuestions.map((question) => {
-      const total = classroom.feedbacks.reduce((sum, f) => sum + (f.answers[question.id] || 0), 0);
+      const total = classroom.feedbacks.reduce((sum: number, f) => sum + (f.answers[question.id] || 0), 0);
       const average = total / classroom.feedbacks.length;
       return {
         name: `Q${question.order + 1}`,
@@ -212,33 +212,33 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   const getAverageRating = () => {
     if (classroom.feedbacks.length === 0) return 0;
-    const total = classroom.feedbacks.reduce((sum, f) => {
+    const total = classroom.feedbacks.reduce((sum: number, f) => {
       const answers = Object.values(f.answers);
-      return sum + answers.reduce((a, b) => a + b, 0) / answers.length;
+      return sum + answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
     }, 0);
     return (total / classroom.feedbacks.length).toFixed(1);
   };
 
   const getQuizAnalytics = (quizId: string) => {
-    const attempts = classroom.quizAttempts.filter(a => a.quizId === quizId);
+    const attempts = classroom.quizAttempts.filter((a) => a.quizId === quizId);
     if (attempts.length === 0) return null;
     
-    const avgScore = attempts.reduce((sum, a) => sum + (a.score / a.totalQuestions) * 100, 0) / attempts.length;
+    const avgScore = attempts.reduce((sum: number, a) => sum + (a.score / a.totalQuestions) * 100, 0) / attempts.length;
     const distribution = [
-      { range: '90-100%', count: attempts.filter(a => (a.score / a.totalQuestions) * 100 >= 90).length },
-      { range: '80-89%', count: attempts.filter(a => {
+      { range: '90-100%', count: attempts.filter((a) => (a.score / a.totalQuestions) * 100 >= 90).length },
+      { range: '80-89%', count: attempts.filter((a) => {
         const pct = (a.score / a.totalQuestions) * 100;
         return pct >= 80 && pct < 90;
       }).length },
-      { range: '70-79%', count: attempts.filter(a => {
+      { range: '70-79%', count: attempts.filter((a) => {
         const pct = (a.score / a.totalQuestions) * 100;
         return pct >= 70 && pct < 80;
       }).length },
-      { range: '60-69%', count: attempts.filter(a => {
+      { range: '60-69%', count: attempts.filter((a) => {
         const pct = (a.score / a.totalQuestions) * 100;
         return pct >= 60 && pct < 70;
       }).length },
-      { range: '<60%', count: attempts.filter(a => (a.score / a.totalQuestions) * 100 < 60).length },
+      { range: '<60%', count: attempts.filter((a) => (a.score / a.totalQuestions) * 100 < 60).length },
     ];
     
     return { avgScore: Math.round(avgScore), distribution, totalAttempts: attempts.length };
@@ -254,7 +254,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
     const quiz = classroom.quizzes.find(q => q.id === activeQuiz);
     if (!quiz) return null;
 
-    const answeredCount = quizAnswers.filter(a => a !== -1).length;
+    const answeredCount = quizAnswers.filter((a: number) => a !== -1).length;
     const progress = (answeredCount / quiz.questions.length) * 100;
 
     return (
@@ -594,14 +594,14 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {classroom.feedbacks.filter(f => f.comment).length === 0 ? (
+                        {classroom.feedbacks.filter((f) => f.comment).length === 0 ? (
                           <p className="text-center py-4" style={{ color: '#C1C0B9' }}>No comments yet</p>
                         ) : (
                           classroom.feedbacks
-                            .filter(f => f.comment)
+                            .filter((f) => f.comment)
                             .map((feedback) => {
                               const answers = Object.values(feedback.answers);
-                              const avg = answers.reduce((a, b) => a + b, 0) / answers.length;
+                              const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
                               return (
                                 <div key={feedback.id} className="p-4 rounded-lg" style={{ background: '#E7E6E1' }}>
                                   <div className="flex items-center gap-2 mb-2">

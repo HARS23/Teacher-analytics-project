@@ -12,7 +12,7 @@ interface AuthContextType {
   joinClassroom: (code: string) => Promise<{ success: boolean; message: string }>;
   getTeacherClassrooms: () => Promise<Classroom[]>;
   getStudentClassrooms: () => Promise<Classroom[]>;
-  getClassroomById: (id: string) => Promise<any>;
+  getClassroomById: (id: string) => Promise<Classroom | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
