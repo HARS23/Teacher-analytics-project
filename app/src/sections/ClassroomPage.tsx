@@ -65,7 +65,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   useEffect(() => {
     if (classroom) {
       const initialAnswers: Record<string, number> = {};
-      classroom.feedbackQuestions.forEach(q => {
+      (classroom.feedbackQuestions ?? []).forEach((q) => {
         initialAnswers[q.id] = 3;
       });
       setAnswers(initialAnswers);
@@ -108,11 +108,11 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const isStudent = currentUser.role === 'student';
   // Feedback and quiz features temporarily disabled
   const hasSubmittedFeedbackStatus = false;
-  const isEnrolled = classroom.students.includes(currentUser.id);
+  const isEnrolled = (classroom.students ?? []).includes(currentUser.id);
 
   const getStudentNames = () => {
     // Student names feature temporarily disabled
-    return classroom.students.map((_, index) => `Student ${index + 1}`);
+    return (classroom.students ?? []).map((_, index) => `Student ${index + 1}`);
   };
 
   const handleAnswerChange = (questionId: string, value: number[]) => {
@@ -127,7 +127,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   // Quiz functions
   const startQuiz = (quizId: string) => {
-    const quiz = classroom.quizzes.find(q => q.id === quizId);
+    const quiz = (classroom.quizzes ?? []).find((q) => q.id === quizId);
     if (!quiz) return;
     
     setActiveQuiz(quizId);
@@ -160,9 +160,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   // Analytics data for teachers
   const getAnalyticsData = () => {
-    if (classroom.feedbacks.length === 0) return [];
-
-    const feedbacks = classroom.feedbacks;
+    const feedbacks = classroom.feedbacks ?? [];
+    if (feedbacks.length === 0) return [];
     
     const excellent = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
@@ -197,11 +196,13 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const getQuestionAnalytics = () => {
-    if (classroom.feedbacks.length === 0) return [];
+    const feedbacks = classroom.feedbacks ?? [];
+    const feedbackQuestions = classroom.feedbackQuestions ?? [];
+    if (feedbacks.length === 0 || feedbackQuestions.length === 0) return [];
 
-    return classroom.feedbackQuestions.map((question) => {
-      const total = classroom.feedbacks.reduce((sum: number, f) => sum + (f.answers[question.id] || 0), 0);
-      const average = total / classroom.feedbacks.length;
+    return feedbackQuestions.map((question) => {
+      const total = feedbacks.reduce((sum: number, f) => sum + (f.answers[question.id] || 0), 0);
+      const average = total / feedbacks.length;
       return {
         name: `Q${question.order + 1}`,
         fullQuestion: question.text,
@@ -211,16 +212,17 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const getAverageRating = () => {
-    if (classroom.feedbacks.length === 0) return 0;
-    const total = classroom.feedbacks.reduce((sum: number, f) => {
+    const feedbacks = classroom.feedbacks ?? [];
+    if (feedbacks.length === 0) return 0;
+    const total = feedbacks.reduce((sum: number, f) => {
       const answers = Object.values(f.answers);
       return sum + answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
     }, 0);
-    return (total / classroom.feedbacks.length).toFixed(1);
+    return (total / feedbacks.length).toFixed(1);
   };
 
   const getQuizAnalytics = (quizId: string) => {
-    const attempts = classroom.quizAttempts.filter((a) => a.quizId === quizId);
+    const attempts = (classroom.quizAttempts ?? []).filter((a) => a.quizId === quizId);
     if (attempts.length === 0) return null;
     
     const avgScore = attempts.reduce((sum: number, a) => sum + (a.score / a.totalQuestions) * 100, 0) / attempts.length;
@@ -251,7 +253,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   // Active Quiz View
   if (activeQuiz && !quizCompleted) {
-    const quiz = classroom.quizzes.find(q => q.id === activeQuiz);
+    const quiz = (classroom.quizzes ?? []).find((q) => q.id === activeQuiz);
     if (!quiz) return null;
 
     const answeredCount = quizAnswers.filter((a: number) => a !== -1).length;
@@ -392,7 +394,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>Students</p>
-                  <p className="font-medium" style={{ color: '#537791' }}>{classroom.students.length}</p>
+                  <p className="font-medium" style={{ color: '#537791' }}>{(classroom.students ?? []).length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -401,7 +403,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>Feedback</p>
-                  <p className="font-medium" style={{ color: '#537791' }}>{classroom.feedbacks.length}</p>
+                  <p className="font-medium" style={{ color: '#537791' }}>{(classroom.feedbacks ?? []).length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -410,7 +412,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>Quizzes</p>
-                  <p className="font-medium" style={{ color: '#537791' }}>{classroom.quizzes.length}</p>
+                  <p className="font-medium" style={{ color: '#537791' }}>{(classroom.quizzes ?? []).length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -476,7 +478,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
             </TabsList>
 
             <TabsContent value="feedback" className="space-y-6">
-              {classroom.feedbacks.length === 0 ? (
+              {(classroom.feedbacks ?? []).length === 0 ? (
                 <Card className="text-center py-16 border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                   <CardContent>
                     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#E7E6E1' }}>
@@ -503,15 +505,15 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                     <Card className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                       <CardContent className="p-6 text-center">
                         <p className="text-sm mb-2" style={{ color: '#C1C0B9' }}>Total Responses</p>
-                        <p className="text-4xl font-bold" style={{ color: '#537791' }}>{classroom.feedbacks.length}</p>
+                        <p className="text-4xl font-bold" style={{ color: '#537791' }}>{(classroom.feedbacks ?? []).length}</p>
                       </CardContent>
                     </Card>
                     <Card className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                       <CardContent className="p-6 text-center">
                         <p className="text-sm mb-2" style={{ color: '#C1C0B9' }}>Response Rate</p>
                         <p className="text-4xl font-bold" style={{ color: '#537791' }}>
-                          {classroom.students.length > 0 
-                            ? Math.round((classroom.feedbacks.length / classroom.students.length) * 100)
+                          {(classroom.students ?? []).length > 0 
+                            ? Math.round(((classroom.feedbacks ?? []).length / (classroom.students ?? []).length) * 100)
                             : 0}%
                         </p>
                       </CardContent>
@@ -636,7 +638,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
             </TabsContent>
 
             <TabsContent value="quizzes" className="space-y-6">
-              {classroom.quizzes.length === 0 ? (
+              {(classroom.quizzes ?? []).length === 0 ? (
                 <Card className="text-center py-16 border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                   <CardContent>
                     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#E7E6E1' }}>
@@ -648,7 +650,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  {classroom.quizzes.map((quiz) => {
+                  {(classroom.quizzes ?? []).map((quiz) => {
                     const analytics = getQuizAnalytics(quiz.id);
                     return (
                       <Card key={quiz.id} className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
@@ -823,7 +825,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
             </TabsContent>
 
             <TabsContent value="quizzes">
-              {classroom.quizzes.length === 0 ? (
+              {(classroom.quizzes ?? []).length === 0 ? (
                 <Card className="text-center py-16 border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                   <CardContent>
                     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#E7E6E1' }}>
@@ -835,7 +837,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {classroom.quizzes.map((quiz) => {
+                  {(classroom.quizzes ?? []).map((quiz) => {
                     // Quiz attempt features temporarily disabled
                     return (
                       <Card key={quiz.id} className="border-0 shadow-lg overflow-hidden" style={{ background: '#F7F6E7' }}>

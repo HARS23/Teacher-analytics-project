@@ -276,7 +276,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                     <div className="flex items-center gap-3 mb-4 text-sm flex-wrap">
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                         <Users className="w-4 h-4" style={{ color: '#537791' }} />
-                        <span style={{ color: '#537791' }}>{classroom.students.length}</span>
+                        <span style={{ color: '#537791' }}>{(classroom.students ?? []).length}</span>
                       </div>
                       {pendingQuizzes > 0 && (
                         <Badge className="border-0" style={{ background: '#537791', color: 'white' }}>
@@ -317,9 +317,9 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                     </div>
 
                     {/* Quizzes Preview */}
-                    {classroom.quizzes.length > 0 && (
+                    {(classroom.quizzes ?? []).length > 0 && (
                       <div className="mb-4 space-y-2">
-                        {classroom.quizzes.slice(0, 2).map((quiz) => {
+                        {(classroom.quizzes ?? []).slice(0, 2).map((quiz) => {
                           // Quiz attempt features temporarily disabled
                           return (
                             <div key={quiz.id} className="flex items-center justify-between p-2 rounded-lg text-sm" style={{ background: '#E7E6E1' }}>
@@ -331,9 +331,9 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                             </div>
                           );
                         })}
-                        {classroom.quizzes.length > 2 && (
+                        {(classroom.quizzes ?? []).length > 2 && (
                           <p className="text-xs text-center" style={{ color: '#C1C0B9' }}>
-                            +{classroom.quizzes.length - 2} more quizzes
+                            +{(classroom.quizzes ?? []).length - 2} more quizzes
                           </p>
                         )}
                       </div>
