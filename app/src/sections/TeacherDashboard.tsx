@@ -144,9 +144,8 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
   const getAnalyticsData = (classroomId: string) => {
     const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
-    if (!classroom || classroom.feedbacks.length === 0) return [];
-
-    const feedbacks = classroom.feedbacks;
+    const feedbacks = classroom?.feedbacks ?? [];
+    if (!classroom || feedbacks.length === 0) return [];
 
     const excellent = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
@@ -182,13 +181,14 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
   const getAverageRating = (classroomId: string) => {
     const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
-    if (!classroom || classroom.feedbacks.length === 0) return '0';
+    const feedbacks = classroom?.feedbacks ?? [];
+    if (!classroom || feedbacks.length === 0) return '0';
 
-    const total = classroom.feedbacks.reduce((sum: number, f) => {
+    const total = feedbacks.reduce((sum: number, f) => {
       const answers = Object.values(f.answers);
       return sum + answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
     }, 0);
-    return (total / classroom.feedbacks.length).toFixed(1);
+    return (total / feedbacks.length).toFixed(1);
   };
 
   const getQuizAverageScore = (classroomId: string, quizId: string) => {
@@ -433,7 +433,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer hover:shadow-sm transition-shadow"
                                style={{ background: '#E7E6E1' }}>
                             <Users className="w-4 h-4" style={{ color: '#537791' }} />
-                            <span style={{ color: '#537791' }}>{classroom.students.length} Students</span>
+                            <span style={{ color: '#537791' }}>{(classroom.students ?? []).length} Students</span>
                           </div>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md" style={{ background: '#F7F6E7' }}>
@@ -443,7 +443,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                               Student List - {classroom.name}
                             </DialogTitle>
                             <DialogDescription style={{ color: '#C1C0B9' }}>
-                              {classroom.students.length} students enrolled
+                              {(classroom.students ?? []).length} students enrolled
                             </DialogDescription>
                           </DialogHeader>
                           <div className="py-4">
@@ -468,13 +468,13 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                         <ClipboardList className="w-4 h-4" style={{ color: '#537791' }} />
-                        <span style={{ color: '#537791' }}>{classroom.feedbacks.length} Feedback</span>
+                        <span style={{ color: '#537791' }}>{(classroom.feedbacks ?? []).length} Feedback</span>
                       </div>
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                         <Target className="w-4 h-4" style={{ color: '#537791' }} />
-                        <span style={{ color: '#537791' }}>{classroom.quizzes.length} Quizzes</span>
+                        <span style={{ color: '#537791' }}>{(classroom.quizzes ?? []).length} Quizzes</span>
                       </div>
-                      {classroom.feedbacks.length > 0 && (
+                      {(classroom.feedbacks ?? []).length > 0 && (
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                           <Star className="w-4 h-4" style={{ color: '#537791' }} />
                           <span style={{ color: '#537791' }}>{avgRating}/5.0</span>
@@ -690,7 +690,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                     </div>
 
                     {/* Analytics Section */}
-                    {classroom.feedbacks.length > 0 && (
+                    {(classroom.feedbacks ?? []).length > 0 && (
                       <div className="mt-4 pt-4" style={{ borderTop: '1px solid #E7E6E1' }}>
                         <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: '#537791' }}>
                           <TrendingUp className="w-4 h-4" />
@@ -721,14 +721,14 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                     )}
 
                     {/* Quizzes List */}
-                    {classroom.quizzes.length > 0 && (
+                    {(classroom.quizzes ?? []).length > 0 && (
                       <div className="mt-4 pt-4" style={{ borderTop: '1px solid #E7E6E1' }}>
                         <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: '#537791' }}>
                           <Award className="w-4 h-4" />
                           Active Quizzes
                         </h4>
                         <div className="space-y-2">
-                          {classroom.quizzes.map((quiz) => {
+                          {(classroom.quizzes ?? []).map((quiz) => {
                             const avgScore = getQuizAverageScore(classroom.id, quiz.id);
                             const attemptCount = classroom.quizAttempts.filter((a) => a.quizId === quiz.id).length;
                             
