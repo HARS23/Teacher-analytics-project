@@ -1,78 +1,64 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { classroomService } from '@/services/classroomService';
 import type { Classroom } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import {
-  GraduationCap, Plus, Users, BookOpen, ArrowRight, LogOut, Copy, Check,
-  ClipboardList, MessageCircle, HelpCircle, Trash2, Target,
-  Award, TrendingUp, Zap, Sun, Star, Lightbulb,
-  FileQuestion, ListOrdered, Timer, UserCircle, CheckCircle
-} from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  BookOpen, Users, ClipboardList, Target, Plus, Sun, Zap, Lightbulb,
+  Copy, Check, UserCircle, CheckCircle, MessageCircle, HelpCircle,
+  Trash2, FileQuestion, Timer, ListOrdered, TrendingUp, Award, ArrowRight,
+  LogOut, GraduationCap, Star
+} from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-interface TeacherDashboardProps {
-  onClassroomSelect: (classroomId: string) => void;
-}
+export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id: string) => void }) {
+  const { currentUser, logout, createClassroom, getTeacherClassrooms } = useAuth();
 
-export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
-  const {
-    currentUser,
-    logout,
-    createClassroom,
-    getTeacherClassrooms
-  } = useAuth();
+  const [teacherClassrooms, setTeacherClassrooms] = useState<Classroom[]>([]);
+  const [studentNameMap, setStudentNameMap] = useState<Record<string, string>>({});
 
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [isDebugOpen, setIsDebugOpen] = useState(false);
-
-  const runDebug = async () => {
-    setIsDebugOpen(true);
-    setDebugLogs(['Running diagnostics...']);
-    // Import dynamically to avoid circular dependencies if any, or just use the global/imported service
-    // Assuming classroomService is not exported from context, we import it directly or via a new helper
-    const { classroomService } = await import('@/services/classroomService'); // lazy load
-    try {
-      const logs = await classroomService.debugSupabaseConnection();
-      setDebugLogs(logs);
-    } catch (e) {
-      setDebugLogs([`Diagnostics failed: ${e}`]);
-    }
-  };
-
-  // Create classroom dialog
+  // Create Classroom Dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
   const [newClassroomSubject, setNewClassroomSubject] = useState('');
   const [newClassroomDescription, setNewClassroomDescription] = useState('');
 
-  // Copy code state
+  // Copy Code
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // Feedback question dialog
+  // Student List Dialog
+  const [isStudentListOpen, setIsStudentListOpen] = useState(false);
+  const [selectedClassroomForStudents, setSelectedClassroomForStudents] = useState<string | null>(null);
+
+  // Feedback Question Dialog
   const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
   const [selectedClassroomForQuestion, setSelectedClassroomForQuestion] = useState<string | null>(null);
   const [newQuestionText, setNewQuestionText] = useState('');
 
-  // Quiz creation dialog
+  // Quiz Dialog
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [selectedClassroomForQuiz, setSelectedClassroomForQuiz] = useState<string | null>(null);
   const [newQuizTitle, setNewQuizTitle] = useState('');
   const [newQuizDescription, setNewQuizDescription] = useState('');
   const [newQuizTimeLimit, setNewQuizTimeLimit] = useState(15);
-  const [quizQuestions, setQuizQuestions] = useState<{ text: string; options: string[]; correctAnswer: number; order: number }[]>([
-    { text: '', options: ['', '', '', ''], correctAnswer: 0, order: 0 }
-  ]);
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([{ text: '', options: ['', '', '', ''], correctAnswer: 0, order: 0 }]);
 
-  // Student list dialog
-  const [isStudentListOpen, setIsStudentListOpen] = useState(false);
-  const [selectedClassroomForStudents, setSelectedClassroomForStudents] = useState<string | null>(null);
-  const [teacherClassrooms, setTeacherClassrooms] = useState<Classroom[]>([]);
+  // Debug
+  const [isDebugOpen, setIsDebugOpen] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+  const runDebug = async () => {
+    setIsDebugOpen(true);
+    setDebugLogs(['Running diagnostics...']);
+    const logs = await classroomService.debugSupabaseConnection(currentUser?.email);
+    setDebugLogs(logs);
+  };
 
   useEffect(() => {
     const loadClassrooms = async () => {
@@ -82,13 +68,19 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
       }
       const classrooms = await getTeacherClassrooms();
       setTeacherClassrooms(classrooms);
+
+      // Fetch student names
+      const allStudentEmails = Array.from(new Set(classrooms.flatMap(c => c.students)));
+      if (allStudentEmails.length > 0) {
+        const names = await classroomService.getStudentNames(allStudentEmails);
+        setStudentNameMap(names);
+      }
     };
     loadClassrooms();
   }, [currentUser, getTeacherClassrooms]);
 
-  const getStudentNames = (studentIds: string[]) => {
-    // Student names feature temporarily disabled
-    return studentIds.map((_, index) => `Student ${index + 1}`);
+  const getStudentNames = (studentEmails: string[]) => {
+    return studentEmails.map(email => studentNameMap[email] || email);
   };
 
   const handleCreateClassroom = async () => {
@@ -121,19 +113,65 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleAddQuestion = () => {
-    // Feedback question feature temporarily disabled
-    toast.error('Feedback question feature is temporarily unavailable');
+  const handleAddQuestion = async () => {
+    if (!selectedClassroomForQuestion || !newQuestionText.trim()) return;
+
+    const classroom = teacherClassrooms.find(c => c.id === selectedClassroomForQuestion);
+    if (!classroom) return;
+
+    const order = classroom.feedbackQuestions.length;
+    const result = await classroomService.addFeedbackQuestion(selectedClassroomForQuestion, newQuestionText, order);
+
+    if (result.success) {
+      toast.success(result.message);
+      setNewQuestionText('');
+      // Refresh
+      const classrooms = await getTeacherClassrooms();
+      setTeacherClassrooms(classrooms);
+    } else {
+      toast.error(result.message);
+    }
   };
 
-  const handleRemoveQuestion = (_classroomId: string, _questionId: string) => {
-    // Feedback question feature temporarily disabled
-    toast.error('Feedback question feature is temporarily unavailable');
+  const handleRemoveQuestion = async (classroomId: string, questionId: string) => {
+    const result = await classroomService.removeFeedbackQuestion(questionId);
+    if (result.success) {
+      toast.success(result.message);
+      // Refresh
+      const classrooms = await getTeacherClassrooms();
+      setTeacherClassrooms(classrooms);
+    } else {
+      toast.error(result.message);
+    }
   };
 
-  const handleCreateQuiz = () => {
-    // Quiz creation feature temporarily disabled
-    toast.error('Quiz creation feature is temporarily unavailable');
+  const handleCreateQuiz = async () => {
+    if (!selectedClassroomForQuiz || !newQuizTitle.trim()) {
+      toast.error('Please enter a quiz title');
+      return;
+    }
+
+    const quiz = {
+      title: newQuizTitle,
+      description: newQuizDescription,
+      timeLimit: newQuizTimeLimit,
+      questions: quizQuestions
+    };
+
+    const result = await classroomService.createQuiz(selectedClassroomForQuiz, quiz);
+
+    if (result.success) {
+      toast.success(result.message);
+      setIsQuizDialogOpen(false);
+      setNewQuizTitle('');
+      setNewQuizDescription('');
+      setQuizQuestions([{ text: '', options: ['', '', '', ''], correctAnswer: 0, order: 0 }]);
+      // Refresh
+      const classrooms = await getTeacherClassrooms();
+      setTeacherClassrooms(classrooms);
+    } else {
+      toast.error(result.message);
+    }
   };
 
   const addQuizQuestionField = () => {

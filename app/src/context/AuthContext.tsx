@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data, error } = await supabase
       .from('classrooms')
-      .insert([{ name, subject, description, code, teacher_id: currentUser.id }])
+      .insert([{ name, subject, description, code, teacher_id: currentUser.email }])
       .select();
 
     if (error || !data) return { success: false, message: 'Failed to create classroom' };
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!classroom) return { success: false, message: 'Invalid code' };
 
     await supabase.from('enrollments').insert([
-      { classroom_id: classroom.id, student_id: currentUser.id }
+      { classroom_id: classroom.id, student_id: currentUser.email }
     ]);
 
     return { success: true, message: 'Joined classroom successfully!' };
@@ -111,12 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getTeacherClassrooms = async () => {
     if (!currentUser) return [];
-    return classroomService.getTeacherClassrooms(currentUser.id);
+    return classroomService.getTeacherClassrooms(currentUser.email);
   };
 
   const getStudentClassrooms = async () => {
     if (!currentUser) return [];
-    return classroomService.getStudentClassrooms(currentUser.id);
+    return classroomService.getStudentClassrooms(currentUser.email);
   };
 
   const getClassroomById = async (id: string) => {

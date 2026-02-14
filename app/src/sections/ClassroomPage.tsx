@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { classroomService } from '@/services/classroomService';
 import type { Classroom } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const [quizTimeLeft, setQuizTimeLeft] = useState(0);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [quizScore, setQuizScore] = useState<{ score: number; total: number } | null>(null);
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   useEffect(() => {
@@ -61,6 +63,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   }, [classroomId, currentUser, getTeacherClassrooms, getStudentClassrooms]);
 
 
+  const [studentNameMap, setStudentNameMap] = useState<Record<string, string>>({});
+
   // Initialize answers when classroom loads
   useEffect(() => {
     if (classroom) {
@@ -69,6 +73,12 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
         initialAnswers[q.id] = 3;
       });
       setAnswers(initialAnswers);
+
+      // Fetch student names
+      const students = classroom.students;
+      if (students.length > 0) {
+        classroomService.getStudentNames(students).then(names => setStudentNameMap(names));
+      }
     }
   }, [classroom]);
 
@@ -106,13 +116,19 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   const isTeacher = currentUser.role === 'teacher';
   const isStudent = currentUser.role === 'student';
-  // Feedback and quiz features temporarily disabled
-  const hasSubmittedFeedbackStatus = false;
-  const isEnrolled = (classroom.students).includes(currentUser.id);
+
+  const hasSubmittedFeedbackStatus = classroom
+    ? classroom.feedbacks.some(f => f.studentId === currentUser.email)
+    : false;
+
+  const isEnrolled = (classroom.students).includes(currentUser.email); // Note: students array contains emails now. currentUser.id is likely email if we updated AuthContext correctly?
+  // checking AuthContext... createClassroom used currentUser.email. 
+  // Let's assume currentUser.id might still be the UUID from Supabase Auth, but enrollments store email?
+  // If `classroom.students` contains emails, and `currentUser.id` is UUID, this check fails.
+  // I should use `currentUser.email`.
 
   const getStudentNames = () => {
-    // Student names feature temporarily disabled
-    return (classroom.students).map((_, index) => `Student ${index + 1}`);
+    return (classroom.students).map(email => studentNameMap[email] || email);
   };
 
   const handleAnswerChange = (questionId: string, value: number[]) => {
@@ -120,9 +136,41 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const handleSubmitFeedback = async () => {
-    // Feedback submission temporarily disabled
-    toast.error('Feedback feature is temporarily unavailable');
-    setIsSubmittingFeedback(false);
+    if (!classroom || !currentUser) return;
+    setIsSubmittingFeedback(true);
+
+    try {
+      const result = await classroomService.submitFeedback({
+        classroomId: classroom.id,
+        studentId: currentUser.email,
+        answers,
+        comment
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+        // Optimistic update or refresh needed. For now, rely on reload or just simple state update if we had setClassroom.
+        // We have setClassroom. Let's update it to reflect submission status immediately.
+        const newFeedback = {
+          id: 'temp-' + Date.now(),
+          studentId: currentUser.email,
+          classroomId: classroom.id,
+          answers,
+          comment,
+          submittedAt: new Date()
+        };
+        setClassroom({
+          ...classroom,
+          feedbacks: [...classroom.feedbacks, newFeedback]
+        });
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to submit feedback');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
   };
 
   // Quiz functions
@@ -143,13 +191,48 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const handleSubmitQuiz = async () => {
-    // Quiz submission temporarily disabled
-    if (!activeQuiz) return;
+    if (!activeQuiz || !classroom || !currentUser) return;
 
     setIsSubmittingQuiz(true);
-    toast.error('Quiz feature is temporarily unavailable');
-    setIsSubmittingQuiz(false);
-    setActiveQuiz(null);
+
+    const quiz = classroom.quizzes.find(q => q.id === activeQuiz);
+    if (!quiz) {
+      setIsSubmittingQuiz(false);
+      return;
+    }
+
+    // Calculate score
+    let score = 0;
+    quiz.questions.forEach((q, index) => {
+      // Ensure we compare numbers. q.correctAnswer should be number from normalized service.
+      if (Number(quizAnswers[index]) === Number(q.correctAnswer)) {
+        score++;
+      }
+    });
+
+    try {
+      const result = await classroomService.submitQuizAttempt({
+        quizId: activeQuiz,
+        studentId: currentUser.email,
+        answers: quizAnswers,
+        score,
+        totalQuestions: quiz.questions.length
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+        setQuizScore({ score, total: quiz.questions.length });
+        setQuizCompleted(true);
+        // Do NOT set activeQuiz to null immediately, so we can show result.
+        // setActiveQuiz(null); 
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error('Failed to submit quiz');
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -260,6 +343,59 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const questionAnalytics = getQuestionAnalytics();
   const averageRating = getAverageRating();
   const studentNames = getStudentNames();
+
+  // Quiz Result View
+  if (activeQuiz && quizCompleted && quizScore) {
+    const quiz = (classroom.quizzes).find((q) => q.id === activeQuiz);
+    const percentage = Math.round((quizScore.score / quizScore.total) * 100);
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #F7F6E7 0%, #E7E6E1 100%)' }}>
+        <Card className="w-full max-w-md border-0 shadow-xl" style={{ background: '#F7F6E7' }}>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-4"
+              style={{ background: percentage >= 70 ? '#dcfce7' : '#fee2e2' }}>
+              {percentage >= 70 ? (
+                <Award className="w-10 h-10 text-green-600" />
+              ) : (
+                <Target className="w-10 h-10 text-red-600" />
+              )}
+            </div>
+            <CardTitle className="text-2xl font-bold" style={{ color: '#537791' }}>
+              Quiz Completed!
+            </CardTitle>
+            <CardDescription style={{ color: '#C1C0B9' }}>
+              {quiz?.title}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="text-center">
+              <span className="text-5xl font-bold" style={{ color: '#537791' }}>{percentage}%</span>
+              <p className="text-sm mt-2" style={{ color: '#C1C0B9' }}>
+                You scored {quizScore.score} out of {quizScore.total} questions
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm" style={{ color: '#537791' }}>
+                <span>Correct Answers</span>
+                <span className="font-bold">{quizScore.score}</span>
+              </div>
+              <Progress value={percentage} className="h-2" />
+            </div>
+
+            <Button
+              onClick={() => { setActiveQuiz(null); setQuizCompleted(false); setQuizScore(null); }}
+              className="w-full h-12 text-lg font-medium"
+              style={{ background: '#537791' }}
+            >
+              Back to Classroom
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Active Quiz View
   if (activeQuiz && !quizCompleted) {
