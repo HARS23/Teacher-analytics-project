@@ -133,7 +133,7 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
     }
   };
 
-  const handleRemoveQuestion = async (classroomId: string, questionId: string) => {
+  const handleRemoveQuestion = async (_classroomId: string, questionId: string) => {
     const result = await classroomService.removeFeedbackQuestion(questionId);
     if (result.success) {
       toast.success(result.message);
@@ -724,7 +724,7 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
                                     style={{ background: '#F7F6E7', color: '#537791' }}
                                   />
                                   <div className="grid grid-cols-2 gap-2">
-                                    {q.options.map((option, oIndex) => (
+                                    {q.options.map((option: string, oIndex: number) => (
                                       <div key={oIndex} className="flex items-center gap-2">
                                         <input
                                           type="radio"

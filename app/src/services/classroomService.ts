@@ -263,27 +263,9 @@ export const classroomService = {
     async addFeedbackQuestion(classroomId: string, text: string, order: number): Promise<{ success: boolean; message: string }> {
         const { error } = await supabase
             .from('feedback_questions')
-            .insert([{
-                classroom_id: classroomId,
-                text,
-                order_index: order // Assuming column is order_index or "order" - checking schema would be safer but "order" is keyword. context suggests "order" in type, likely mapped from DB. Let's assume schema matches or is close. I will use 'order' if it fails i will fix. *Wait*, looking at normalize it used `data.order`.
-            }]);
-        // actually re-reading previous code, normalizeFeedbackQuestion uses `data.order`. supabase insert keys must match DB columns.
-        // Let's check `normalizeFeedbackQuestion` again in previous turn... it says `order: data.order || 0`.
-        // So DB column is likely `order`. But `order` is a reserved word in SQL. usually it's quoted or named `order_index`.
-        // I'll stick to `order` for now as per previous readings, but if it fails I'll check.
-        // actually, looking at `debugSupabaseConnection` tables list, it checks `feedback_questions`.
-        // I'll assume column is `order` based on `normalizeFeedbackQuestion`.
-
-        // Wait, I should verify the column name for 'order' in feedback_questions.
-        // `normalizeFeedbackQuestion` maps `data.order` -> `order`.
-        // So the DB column is likely named `order`.
-
-        const { error: insertError } = await supabase
-            .from('feedback_questions')
             .insert([{ classroom_id: classroomId, text, "order": order }]);
 
-        if (insertError) return { success: false, message: insertError.message };
+        if (error) return { success: false, message: error.message };
         return { success: true, message: 'Question added' };
     },
 
