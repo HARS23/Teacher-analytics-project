@@ -8,9 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { 
-  GraduationCap, Plus, Users, BookOpen, ArrowRight, LogOut, Copy, Check, 
-  ClipboardList, MessageCircle, HelpCircle, Trash2, Target, 
+import {
+  GraduationCap, Plus, Users, BookOpen, ArrowRight, LogOut, Copy, Check,
+  ClipboardList, MessageCircle, HelpCircle, Trash2, Target,
   Award, TrendingUp, Zap, Sun, Star, Lightbulb,
   FileQuestion, ListOrdered, Timer, UserCircle, CheckCircle
 } from 'lucide-react';
@@ -21,27 +21,27 @@ interface TeacherDashboardProps {
 }
 
 export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
-  const { 
-    currentUser, 
-    logout, 
-    createClassroom, 
+  const {
+    currentUser,
+    logout,
+    createClassroom,
     getTeacherClassrooms
   } = useAuth();
-  
+
   // Create classroom dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
   const [newClassroomSubject, setNewClassroomSubject] = useState('');
   const [newClassroomDescription, setNewClassroomDescription] = useState('');
-  
+
   // Copy code state
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  
+
   // Feedback question dialog
   const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
   const [selectedClassroomForQuestion, setSelectedClassroomForQuestion] = useState<string | null>(null);
   const [newQuestionText, setNewQuestionText] = useState('');
-  
+
   // Quiz creation dialog
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [selectedClassroomForQuiz, setSelectedClassroomForQuiz] = useState<string | null>(null);
@@ -144,27 +144,28 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
   const getAnalyticsData = (classroomId: string) => {
     const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
-    const feedbacks = classroom?.feedbacks ?? [];
-    if (!classroom || feedbacks.length === 0) return [];
+    if (!classroom || !classroom.feedbacks || classroom.feedbacks.length === 0) return [];
+
+    const feedbacks = classroom.feedbacks;
 
     const excellent = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 4.5;
     }).length;
-    
+
     const good = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 3.5 && avg < 4.5;
     }).length;
-    
+
     const average = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 2.5 && avg < 3.5;
     }).length;
-    
+
     const belowAverage = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
@@ -181,8 +182,9 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
   const getAverageRating = (classroomId: string) => {
     const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
-    const feedbacks = classroom?.feedbacks ?? [];
-    if (!classroom || feedbacks.length === 0) return '0';
+    if (!classroom || !classroom.feedbacks || classroom.feedbacks.length === 0) return '0';
+
+    const feedbacks = classroom.feedbacks;
 
     const total = feedbacks.reduce((sum: number, f) => {
       const answers = Object.values(f.answers);
@@ -194,10 +196,10 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
   const getQuizAverageScore = (classroomId: string, quizId: string) => {
     const classroom = teacherClassrooms.find((c: Classroom) => c.id === classroomId);
     if (!classroom) return 0;
-    
+
     const attempts = classroom.quizAttempts.filter((a) => a.quizId === quizId);
     if (attempts.length === 0) return 0;
-    
+
     const total = attempts.reduce((sum: number, a) => sum + (a.score / a.totalQuestions) * 100, 0);
     return Math.round(total / attempts.length);
   };
@@ -209,8 +211,8 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md" 
-                   style={{ background: '#537791' }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
+                style={{ background: '#537791' }}>
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -219,7 +221,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
               </div>
             </div>
             <Button variant="outline" onClick={logout} className="gap-2 border-0 hover:shadow-md transition-shadow"
-                    style={{ background: '#E7E6E1', color: '#537791' }}>
+              style={{ background: '#E7E6E1', color: '#537791' }}>
               <LogOut className="w-4 h-4" />
               Logout
             </Button>
@@ -296,7 +298,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
-                      style={{ background: '#537791' }}>
+                style={{ background: '#537791' }}>
                 <Plus className="w-4 h-4" />
                 Create New Classroom
               </Button>
@@ -349,11 +351,11 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}
-                        style={{ borderColor: '#C1C0B9', color: '#537791' }}>
+                  style={{ borderColor: '#C1C0B9', color: '#537791' }}>
                   Cancel
                 </Button>
                 <Button onClick={handleCreateClassroom} className="text-white"
-                        style={{ background: '#537791' }}>
+                  style={{ background: '#537791' }}>
                   <Zap className="w-4 h-4 mr-2" />
                   Create Classroom
                 </Button>
@@ -383,7 +385,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
               const analyticsData = getAnalyticsData(classroom.id);
               const avgRating = getAverageRating(classroom.id);
               const studentNames = getStudentNames(classroom.students);
-              
+
               return (
                 <Card key={classroom.id} className="overflow-hidden border-0 shadow-xl" style={{ background: '#F7F6E7' }}>
                   <CardHeader className="pb-4" style={{ background: '#E7E6E1' }}>
@@ -398,8 +400,8 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                           {classroom.subject}
                         </CardDescription>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg shadow-sm" 
-                           style={{ background: '#F7F6E7', border: '1px solid #C1C0B9' }}>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg shadow-sm"
+                        style={{ background: '#F7F6E7', border: '1px solid #C1C0B9' }}>
                         <span className="text-sm font-mono font-bold" style={{ color: '#537791' }}>{classroom.code}</span>
                         <button
                           onClick={() => copyToClipboard(classroom.code)}
@@ -419,21 +421,21 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                     <p className="text-sm mb-4 line-clamp-2" style={{ color: '#C1C0B9' }}>
                       {classroom.description || 'No description provided'}
                     </p>
-                    
+
                     {/* Stats Row */}
                     <div className="flex items-center gap-4 mb-4 text-sm flex-wrap">
                       {/* Student List Dialog */}
                       <Dialog open={isStudentListOpen && selectedClassroomForStudents === classroom.id}
-                              onOpenChange={(open) => {
-                                setIsStudentListOpen(open);
-                                if (open) setSelectedClassroomForStudents(classroom.id);
-                                else setSelectedClassroomForStudents(null);
-                              }}>
+                        onOpenChange={(open) => {
+                          setIsStudentListOpen(open);
+                          if (open) setSelectedClassroomForStudents(classroom.id);
+                          else setSelectedClassroomForStudents(null);
+                        }}>
                         <DialogTrigger asChild>
                           <div className="flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer hover:shadow-sm transition-shadow"
-                               style={{ background: '#E7E6E1' }}>
+                            style={{ background: '#E7E6E1' }}>
                             <Users className="w-4 h-4" style={{ color: '#537791' }} />
-                            <span style={{ color: '#537791' }}>{(classroom.students ?? []).length} Students</span>
+                            <span style={{ color: '#537791' }}>{classroom.students.length} Students</span>
                           </div>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md" style={{ background: '#F7F6E7' }}>
@@ -443,7 +445,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                               Student List - {classroom.name}
                             </DialogTitle>
                             <DialogDescription style={{ color: '#C1C0B9' }}>
-                              {(classroom.students ?? []).length} students enrolled
+                              {classroom.students.length} students enrolled
                             </DialogDescription>
                           </DialogHeader>
                           <div className="py-4">
@@ -468,13 +470,13 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                         <ClipboardList className="w-4 h-4" style={{ color: '#537791' }} />
-                        <span style={{ color: '#537791' }}>{(classroom.feedbacks ?? []).length} Feedback</span>
+                        <span style={{ color: '#537791' }}>{classroom.feedbacks.length} Feedback</span>
                       </div>
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                         <Target className="w-4 h-4" style={{ color: '#537791' }} />
-                        <span style={{ color: '#537791' }}>{(classroom.quizzes ?? []).length} Quizzes</span>
+                        <span style={{ color: '#537791' }}>{classroom.quizzes.length} Quizzes</span>
                       </div>
-                      {(classroom.feedbacks ?? []).length > 0 && (
+                      {classroom.feedbacks.length > 0 && (
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
                           <Star className="w-4 h-4" style={{ color: '#537791' }} />
                           <span style={{ color: '#537791' }}>{avgRating}/5.0</span>
@@ -484,15 +486,15 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
 
                     {/* Action Buttons */}
                     <div className="flex gap-2 mb-4">
-                      <Dialog open={isQuestionDialogOpen && selectedClassroomForQuestion === classroom.id} 
-                              onOpenChange={(open) => {
-                                setIsQuestionDialogOpen(open);
-                                if (open) setSelectedClassroomForQuestion(classroom.id);
-                                else setSelectedClassroomForQuestion(null);
-                              }}>
+                      <Dialog open={isQuestionDialogOpen && selectedClassroomForQuestion === classroom.id}
+                        onOpenChange={(open) => {
+                          setIsQuestionDialogOpen(open);
+                          if (open) setSelectedClassroomForQuestion(classroom.id);
+                          else setSelectedClassroomForQuestion(null);
+                        }}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" className="gap-1 border-0 hover:shadow-sm transition-shadow"
-                                  style={{ background: '#E7E6E1', color: '#537791' }}>
+                            style={{ background: '#E7E6E1', color: '#537791' }}>
                             <MessageCircle className="w-3.5 h-3.5" />
                             Questions
                           </Button>
@@ -507,7 +509,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                               Add or remove questions for student feedback in {classroom.name}
                             </DialogDescription>
                           </DialogHeader>
-                          
+
                           <div className="space-y-4 py-4">
                             {/* Existing Questions */}
                             <div className="space-y-2">
@@ -528,7 +530,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                                 ))}
                               </div>
                             </div>
-                            
+
                             {/* Add New Question */}
                             <div className="space-y-2 pt-4 border-t" style={{ borderColor: '#E7E6E1' }}>
                               <Label htmlFor="new-question" style={{ color: '#537791' }}>Add New Question</Label>
@@ -551,14 +553,14 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                       </Dialog>
 
                       <Dialog open={isQuizDialogOpen && selectedClassroomForQuiz === classroom.id}
-                              onOpenChange={(open) => {
-                                setIsQuizDialogOpen(open);
-                                if (open) setSelectedClassroomForQuiz(classroom.id);
-                                else setSelectedClassroomForQuiz(null);
-                              }}>
+                        onOpenChange={(open) => {
+                          setIsQuizDialogOpen(open);
+                          if (open) setSelectedClassroomForQuiz(classroom.id);
+                          else setSelectedClassroomForQuiz(null);
+                        }}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" className="gap-1 border-0 hover:shadow-sm transition-shadow"
-                                  style={{ background: '#E7E6E1', color: '#537791' }}>
+                            style={{ background: '#E7E6E1', color: '#537791' }}>
                             <FileQuestion className="w-3.5 h-3.5" />
                             Create Quiz
                           </Button>
@@ -573,7 +575,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                               Create a quiz for {classroom.name}
                             </DialogDescription>
                           </DialogHeader>
-                          
+
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
                               <Label htmlFor="quiz-title" style={{ color: '#537791' }}>Quiz Title</Label>
@@ -623,12 +625,12 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                                   Questions ({quizQuestions.length})
                                 </Label>
                                 <Button type="button" variant="outline" size="sm" onClick={addQuizQuestionField}
-                                        style={{ borderColor: '#C1C0B9', color: '#537791' }}>
+                                  style={{ borderColor: '#C1C0B9', color: '#537791' }}>
                                   <Plus className="w-4 h-4 mr-1" />
                                   Add Question
                                 </Button>
                               </div>
-                              
+
                               {quizQuestions.map((q, qIndex) => (
                                 <div key={qIndex} className="p-4 rounded-lg space-y-3" style={{ background: '#E7E6E1' }}>
                                   <div className="flex items-center justify-between">
@@ -674,10 +676,10 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                               ))}
                             </div>
                           </div>
-                          
+
                           <DialogFooter>
                             <Button variant="outline" onClick={() => setIsQuizDialogOpen(false)}
-                                    style={{ borderColor: '#C1C0B9', color: '#537791' }}>
+                              style={{ borderColor: '#C1C0B9', color: '#537791' }}>
                               Cancel
                             </Button>
                             <Button onClick={handleCreateQuiz} className="text-white" style={{ background: '#537791' }}>
@@ -690,7 +692,7 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                     </div>
 
                     {/* Analytics Section */}
-                    {(classroom.feedbacks ?? []).length > 0 && (
+                    {classroom.feedbacks.length > 0 && (
                       <div className="mt-4 pt-4" style={{ borderTop: '1px solid #E7E6E1' }}>
                         <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: '#537791' }}>
                           <TrendingUp className="w-4 h-4" />
@@ -721,17 +723,17 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                     )}
 
                     {/* Quizzes List */}
-                    {(classroom.quizzes ?? []).length > 0 && (
+                    {classroom.quizzes.length > 0 && (
                       <div className="mt-4 pt-4" style={{ borderTop: '1px solid #E7E6E1' }}>
                         <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: '#537791' }}>
                           <Award className="w-4 h-4" />
                           Active Quizzes
                         </h4>
                         <div className="space-y-2">
-                          {(classroom.quizzes ?? []).map((quiz) => {
+                          {classroom.quizzes.map((quiz) => {
                             const avgScore = getQuizAverageScore(classroom.id, quiz.id);
                             const attemptCount = classroom.quizAttempts.filter((a) => a.quizId === quiz.id).length;
-                            
+
                             return (
                               <div key={quiz.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: '#E7E6E1' }}>
                                 <div>
@@ -749,8 +751,8 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
                       </div>
                     )}
 
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full mt-4 gap-2 border-0 hover:shadow-sm transition-shadow"
                       style={{ background: '#E7E6E1', color: '#537791' }}
                       onClick={() => onClassroomSelect(classroom.id)}

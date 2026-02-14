@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { 
+import {
   ArrowLeft, Users, User, MessageCircle, CheckCircle, Star, BarChart3,
   GraduationCap, BookOpen, ClipboardList, Target, Award, Flame, Zap, Timer, AlertCircle,
   ListOrdered, Clock, MessageSquare, TrendingUp, UserCircle
@@ -24,17 +24,17 @@ interface ClassroomPageProps {
 }
 
 export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
-  const { 
+  const {
     currentUser,
     getTeacherClassrooms,
     getStudentClassrooms
   } = useAuth();
-  
+
   // Feedback form state (disabled)
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [comment, setComment] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-  
+
   // Quiz state (disabled)
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
@@ -46,14 +46,14 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   useEffect(() => {
     const load = async () => {
       if (!currentUser) return;
-      
+
       let classrooms: Classroom[] = [];
       if (currentUser.role === 'teacher') {
         classrooms = await getTeacherClassrooms();
       } else {
         classrooms = await getStudentClassrooms();
       }
-      
+
       const found = classrooms.find(c => c.id === classroomId);
       setClassroom(found || null);
     };
@@ -65,7 +65,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   useEffect(() => {
     if (classroom) {
       const initialAnswers: Record<string, number> = {};
-      (classroom.feedbackQuestions ?? []).forEach((q) => {
+      (classroom.feedbackQuestions).forEach((q) => {
         initialAnswers[q.id] = 3;
       });
       setAnswers(initialAnswers);
@@ -108,11 +108,11 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const isStudent = currentUser.role === 'student';
   // Feedback and quiz features temporarily disabled
   const hasSubmittedFeedbackStatus = false;
-  const isEnrolled = (classroom.students ?? []).includes(currentUser.id);
+  const isEnrolled = (classroom.students).includes(currentUser.id);
 
   const getStudentNames = () => {
     // Student names feature temporarily disabled
-    return (classroom.students ?? []).map((_, index) => `Student ${index + 1}`);
+    return (classroom.students).map((_, index) => `Student ${index + 1}`);
   };
 
   const handleAnswerChange = (questionId: string, value: number[]) => {
@@ -127,9 +127,9 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   // Quiz functions
   const startQuiz = (quizId: string) => {
-    const quiz = (classroom.quizzes ?? []).find((q) => q.id === quizId);
+    const quiz = (classroom.quizzes).find((q) => q.id === quizId);
     if (!quiz) return;
-    
+
     setActiveQuiz(quizId);
     setQuizAnswers(new Array(quiz.questions.length).fill(-1));
     setQuizTimeLeft(quiz.timeLimit * 60);
@@ -145,7 +145,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const handleSubmitQuiz = async () => {
     // Quiz submission temporarily disabled
     if (!activeQuiz) return;
-    
+
     setIsSubmittingQuiz(true);
     toast.error('Quiz feature is temporarily unavailable');
     setIsSubmittingQuiz(false);
@@ -160,27 +160,28 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   // Analytics data for teachers
   const getAnalyticsData = () => {
-    const feedbacks = classroom.feedbacks ?? [];
+    if (!classroom) return [];
+    const feedbacks = classroom.feedbacks;
     if (feedbacks.length === 0) return [];
-    
+
     const excellent = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 4.5;
     }).length;
-    
+
     const good = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 3.5 && avg < 4.5;
     }).length;
-    
+
     const average = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
       return avg >= 2.5 && avg < 3.5;
     }).length;
-    
+
     const belowAverage = feedbacks.filter((f) => {
       const answers = Object.values(f.answers);
       const avg = answers.reduce((a: number, b: number) => a + b, 0) / answers.length;
@@ -196,8 +197,9 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const getQuestionAnalytics = () => {
-    const feedbacks = classroom.feedbacks ?? [];
-    const feedbackQuestions = classroom.feedbackQuestions ?? [];
+    if (!classroom) return [];
+    const feedbacks = classroom.feedbacks;
+    const feedbackQuestions = classroom.feedbackQuestions;
     if (feedbacks.length === 0 || feedbackQuestions.length === 0) return [];
 
     return feedbackQuestions.map((question) => {
@@ -212,7 +214,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const getAverageRating = () => {
-    const feedbacks = classroom.feedbacks ?? [];
+    if (!classroom) return 0;
+    const feedbacks = classroom.feedbacks;
     if (feedbacks.length === 0) return 0;
     const total = feedbacks.reduce((sum: number, f) => {
       const answers = Object.values(f.answers);
@@ -222,27 +225,34 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   };
 
   const getQuizAnalytics = (quizId: string) => {
-    const attempts = (classroom.quizAttempts ?? []).filter((a) => a.quizId === quizId);
+    if (!classroom) return null;
+    const attempts = (classroom.quizAttempts).filter((a) => a.quizId === quizId);
     if (attempts.length === 0) return null;
-    
+
     const avgScore = attempts.reduce((sum: number, a) => sum + (a.score / a.totalQuestions) * 100, 0) / attempts.length;
     const distribution = [
       { range: '90-100%', count: attempts.filter((a) => (a.score / a.totalQuestions) * 100 >= 90).length },
-      { range: '80-89%', count: attempts.filter((a) => {
-        const pct = (a.score / a.totalQuestions) * 100;
-        return pct >= 80 && pct < 90;
-      }).length },
-      { range: '70-79%', count: attempts.filter((a) => {
-        const pct = (a.score / a.totalQuestions) * 100;
-        return pct >= 70 && pct < 80;
-      }).length },
-      { range: '60-69%', count: attempts.filter((a) => {
-        const pct = (a.score / a.totalQuestions) * 100;
-        return pct >= 60 && pct < 70;
-      }).length },
+      {
+        range: '80-89%', count: attempts.filter((a) => {
+          const pct = (a.score / a.totalQuestions) * 100;
+          return pct >= 80 && pct < 90;
+        }).length
+      },
+      {
+        range: '70-79%', count: attempts.filter((a) => {
+          const pct = (a.score / a.totalQuestions) * 100;
+          return pct >= 70 && pct < 80;
+        }).length
+      },
+      {
+        range: '60-69%', count: attempts.filter((a) => {
+          const pct = (a.score / a.totalQuestions) * 100;
+          return pct >= 60 && pct < 70;
+        }).length
+      },
       { range: '<60%', count: attempts.filter((a) => (a.score / a.totalQuestions) * 100 < 60).length },
     ];
-    
+
     return { avgScore: Math.round(avgScore), distribution, totalAttempts: attempts.length };
   };
 
@@ -253,7 +263,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
   // Active Quiz View
   if (activeQuiz && !quizCompleted) {
-    const quiz = (classroom.quizzes ?? []).find((q) => q.id === activeQuiz);
+    const quiz = (classroom.quizzes).find((q) => q.id === activeQuiz);
     if (!quiz) return null;
 
     const answeredCount = quizAnswers.filter((a: number) => a !== -1).length;
@@ -266,8 +276,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" onClick={() => setActiveQuiz(null)} 
-                        className="border-0" style={{ background: '#E7E6E1', color: '#537791' }}>
+                <Button variant="outline" size="sm" onClick={() => setActiveQuiz(null)}
+                  className="border-0" style={{ background: '#E7E6E1', color: '#537791' }}>
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
                 <div>
@@ -275,11 +285,12 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>{classroom.name}</p>
                 </div>
               </div>
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold ${
-                quizTimeLeft < 60 ? '' : ''
-              }`}
-              style={{ background: quizTimeLeft < 60 ? '#fee2e2' : '#E7E6E1', 
-                       color: quizTimeLeft < 60 ? '#dc2626' : '#537791' }}>
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono font-bold ${quizTimeLeft < 60 ? '' : ''
+                }`}
+                style={{
+                  background: quizTimeLeft < 60 ? '#fee2e2' : '#E7E6E1',
+                  color: quizTimeLeft < 60 ? '#dc2626' : '#537791'
+                }}>
                 <Timer className="w-5 h-5" />
                 {formatTime(quizTimeLeft)}
               </div>
@@ -301,23 +312,23 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
               <Card key={question.id} className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                 <CardContent className="p-6">
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" 
-                         style={{ background: '#537791' }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
+                      style={{ background: '#537791' }}>
                       {qIndex + 1}
                     </div>
                     <h3 className="text-lg font-medium pt-1" style={{ color: '#537791' }}>{question.text}</h3>
                   </div>
-                  
-                  <RadioGroup 
-                    value={quizAnswers[qIndex]?.toString()} 
+
+                  <RadioGroup
+                    value={quizAnswers[qIndex]?.toString()}
                     onValueChange={(value) => handleQuizAnswerChange(qIndex, parseInt(value))}
                     className="space-y-3 ml-11"
                   >
                     {question.options.map((option, oIndex) => (
                       <div key={oIndex} className="flex items-center space-x-3 p-3 rounded-lg transition-colors hover:shadow-sm"
-                           style={{ background: '#E7E6E1' }}>
-                        <RadioGroupItem value={oIndex.toString()} id={`q${qIndex}-o${oIndex}`} 
-                                        style={{ accentColor: '#537791' }} />
+                        style={{ background: '#E7E6E1' }}>
+                        <RadioGroupItem value={oIndex.toString()} id={`q${qIndex}-o${oIndex}`}
+                          style={{ accentColor: '#537791' }} />
                         <Label htmlFor={`q${qIndex}-o${oIndex}`} className="flex-1 cursor-pointer" style={{ color: '#537791' }}>
                           {option}
                         </Label>
@@ -328,7 +339,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
               </Card>
             ))}
 
-            <Button 
+            <Button
               onClick={handleSubmitQuiz}
               disabled={isSubmittingQuiz || answeredCount < quiz.questions.length}
               className="w-full text-white font-semibold py-6 shadow-lg"
@@ -355,7 +366,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={onBack} className="gap-2 border-0 hover:shadow-sm transition-shadow"
-                    style={{ background: '#E7E6E1', color: '#537791' }}>
+              style={{ background: '#E7E6E1', color: '#537791' }}>
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
@@ -394,7 +405,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>Students</p>
-                  <p className="font-medium" style={{ color: '#537791' }}>{(classroom.students ?? []).length}</p>
+                  <p className="font-medium" style={{ color: '#537791' }}>{classroom.students.length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -403,7 +414,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>Feedback</p>
-                  <p className="font-medium" style={{ color: '#537791' }}>{(classroom.feedbacks ?? []).length}</p>
+                  <p className="font-medium" style={{ color: '#537791' }}>{classroom.feedbacks.length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -412,7 +423,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </div>
                 <div>
                   <p className="text-sm" style={{ color: '#C1C0B9' }}>Quizzes</p>
-                  <p className="font-medium" style={{ color: '#537791' }}>{(classroom.quizzes ?? []).length}</p>
+                  <p className="font-medium" style={{ color: '#537791' }}>{classroom.quizzes.length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -466,19 +477,19 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
           <Tabs defaultValue="feedback" className="space-y-6">
             <TabsList className="border-0" style={{ background: '#E7E6E1' }}>
               <TabsTrigger value="feedback" className="gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                           style={{ color: '#C1C0B9' }}>
+                style={{ color: '#C1C0B9' }}>
                 <BarChart3 className="w-4 h-4" />
                 Feedback Analytics
               </TabsTrigger>
               <TabsTrigger value="quizzes" className="gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                           style={{ color: '#C1C0B9' }}>
+                style={{ color: '#C1C0B9' }}>
                 <Target className="w-4 h-4" />
                 Quiz Analytics
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="feedback" className="space-y-6">
-              {(classroom.feedbacks ?? []).length === 0 ? (
+              {classroom.feedbacks.length === 0 ? (
                 <Card className="text-center py-16 border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                   <CardContent>
                     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#E7E6E1' }}>
@@ -505,15 +516,15 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                     <Card className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                       <CardContent className="p-6 text-center">
                         <p className="text-sm mb-2" style={{ color: '#C1C0B9' }}>Total Responses</p>
-                        <p className="text-4xl font-bold" style={{ color: '#537791' }}>{(classroom.feedbacks ?? []).length}</p>
+                        <p className="text-4xl font-bold" style={{ color: '#537791' }}>{classroom.feedbacks.length}</p>
                       </CardContent>
                     </Card>
                     <Card className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                       <CardContent className="p-6 text-center">
                         <p className="text-sm mb-2" style={{ color: '#C1C0B9' }}>Response Rate</p>
                         <p className="text-4xl font-bold" style={{ color: '#537791' }}>
-                          {(classroom.students ?? []).length > 0 
-                            ? Math.round(((classroom.feedbacks ?? []).length / (classroom.students ?? []).length) * 100)
+                          {classroom.students.length > 0
+                            ? Math.round((classroom.feedbacks.length / classroom.students.length) * 100)
                             : 0}%
                         </p>
                       </CardContent>
@@ -570,7 +581,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="name" />
                               <YAxis domain={[0, 5]} />
-                              <Tooltip 
+                              <Tooltip
                                 formatter={(value: number) => [`${value}/5`, 'Average Rating']}
                                 labelFormatter={(label) => {
                                   const q = questionAnalytics.find(qa => qa.name === label);
@@ -611,13 +622,14 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                                       {[1, 2, 3, 4, 5].map((star) => (
                                         <Star
                                           key={star}
-                                          className={`w-4 h-4 ${
-                                            star <= avg
-                                              ? ''
-                                              : ''
-                                          }`}
-                                          style={{ color: star <= avg ? '#537791' : '#C1C0B9', 
-                                                   fill: star <= avg ? '#537791' : 'transparent' }}
+                                          className={`w-4 h-4 ${star <= avg
+                                            ? ''
+                                            : ''
+                                            }`}
+                                          style={{
+                                            color: star <= avg ? '#537791' : '#C1C0B9',
+                                            fill: star <= avg ? '#537791' : 'transparent'
+                                          }}
                                         />
                                       ))}
                                     </div>
@@ -638,7 +650,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
             </TabsContent>
 
             <TabsContent value="quizzes" className="space-y-6">
-              {(classroom.quizzes ?? []).length === 0 ? (
+              {classroom.quizzes.length === 0 ? (
                 <Card className="text-center py-16 border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
                   <CardContent>
                     <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#E7E6E1' }}>
@@ -650,7 +662,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  {(classroom.quizzes ?? []).map((quiz) => {
+                  {classroom.quizzes.map((quiz) => {
                     const analytics = getQuizAnalytics(quiz.id);
                     return (
                       <Card key={quiz.id} className="border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
@@ -688,7 +700,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                               </span>
                             )}
                           </div>
-                          
+
                           {analytics && (
                             <div className="h-48 mt-4">
                               <ResponsiveContainer width="100%" height="100%">
@@ -717,12 +729,12 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
           <Tabs defaultValue="feedback" className="space-y-6">
             <TabsList className="border-0" style={{ background: '#E7E6E1' }}>
               <TabsTrigger value="feedback" className="gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                           style={{ color: '#C1C0B9' }}>
+                style={{ color: '#C1C0B9' }}>
                 <MessageCircle className="w-4 h-4" />
                 Feedback
               </TabsTrigger>
               <TabsTrigger value="quizzes" className="gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                           style={{ color: '#C1C0B9' }}>
+                style={{ color: '#C1C0B9' }}>
                 <Target className="w-4 h-4" />
                 Quizzes
               </TabsTrigger>
@@ -756,7 +768,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                         <div key={question.id} className="space-y-3">
                           <Label className="text-base font-medium flex items-start gap-2" style={{ color: '#537791' }}>
                             <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 mt-0.5"
-                                  style={{ background: '#537791' }}>
+                              style={{ background: '#537791' }}>
                               {index + 1}
                             </span>
                             {question.text}
@@ -779,7 +791,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                                 <Star
                                   key={star}
                                   className={`w-5 h-5 transition-colors`}
-                                  style={{ 
+                                  style={{
                                     color: star <= (answers[question.id] || 3) ? '#537791' : '#C1C0B9',
                                     fill: star <= (answers[question.id] || 3) ? '#537791' : 'transparent'
                                   }}
@@ -806,8 +818,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                         />
                       </div>
 
-                      <Button 
-                        onClick={handleSubmitFeedback} 
+                      <Button
+                        onClick={handleSubmitFeedback}
                         disabled={isSubmittingFeedback}
                         className="w-full text-white font-semibold py-6 shadow-lg"
                         style={{ background: '#537791' }}
@@ -863,8 +875,8 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
                               {quiz.timeLimit} minutes
                             </span>
                           </div>
-                          
-                          <Button 
+
+                          <Button
                             onClick={() => startQuiz(quiz.id)}
                             className="w-full text-white"
                             style={{ background: '#537791' }}

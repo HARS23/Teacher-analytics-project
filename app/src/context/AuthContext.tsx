@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabase';
+import { classroomService } from '@/services/classroomService';
 import type { User, UserRole, Classroom } from '@/types';
 
 interface AuthContextType {
@@ -110,55 +111,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getTeacherClassrooms = async () => {
     if (!currentUser) return [];
-    const { data } = await supabase
-      .from('classrooms')
-      .select('*')
-      .eq('teacher_id', currentUser.id);
-    return data || [];
+    return classroomService.getTeacherClassrooms(currentUser.id);
   };
 
   const getStudentClassrooms = async () => {
     if (!currentUser) return [];
-
-    const { data: enrollments } = await supabase
-      .from('enrollments')
-      .select('classroom_id')
-      .eq('student_id', currentUser.id);
-
-    if (!enrollments) return [];
-
-    const ids = enrollments.map(e => e.classroom_id);
-
-    const { data: classrooms } = await supabase
-      .from('classrooms')
-      .select('*')
-      .in('id', ids);
-
-    return classrooms || [];
+    return classroomService.getStudentClassrooms(currentUser.id);
   };
 
   const getClassroomById = async (id: string) => {
-    const { data: classroom } = await supabase
-      .from('classrooms')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (!classroom) return null;
-
-    const { data: enrollments } = await supabase
-      .from('enrollments')
-      .select('student_id')
-      .eq('classroom_id', id);
-
-    return {
-      ...classroom,
-      students: enrollments?.map(e => e.student_id) || [],
-      feedbacks: [],
-      feedbackQuestions: [],
-      quizzes: [],
-      quizAttempts: [],
-    };
+    if (!currentUser) return null;
+    return classroomService.getClassroomById(id);
   };
 
   return (
