@@ -28,6 +28,23 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
     getTeacherClassrooms
   } = useAuth();
 
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [isDebugOpen, setIsDebugOpen] = useState(false);
+
+  const runDebug = async () => {
+    setIsDebugOpen(true);
+    setDebugLogs(['Running diagnostics...']);
+    // Import dynamically to avoid circular dependencies if any, or just use the global/imported service
+    // Assuming classroomService is not exported from context, we import it directly or via a new helper
+    const { classroomService } = await import('@/services/classroomService'); // lazy load
+    try {
+      const logs = await classroomService.debugSupabaseConnection();
+      setDebugLogs(logs);
+    } catch (e) {
+      setDebugLogs([`Diagnostics failed: ${e}`]);
+    }
+  };
+
   // Create classroom dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
@@ -373,10 +390,27 @@ export function TeacherDashboard({ onClassroomSelect }: TeacherDashboardProps) {
               </div>
               <h3 className="text-lg font-semibold mb-2" style={{ color: '#537791' }}>No Classrooms Yet</h3>
               <p style={{ color: '#C1C0B9' }} className="mb-4">Create your first classroom to start collecting feedback</p>
-              <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2 text-white" style={{ background: '#537791' }}>
-                <Plus className="w-4 h-4" />
-                Create Classroom
-              </Button>
+              <div className="flex flex-col gap-2 items-center">
+                <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2 text-white" style={{ background: '#537791' }}>
+                  <Plus className="w-4 h-4" />
+                  Create Classroom
+                </Button>
+                <Button variant="ghost" size="sm" onClick={runDebug} className="text-xs text-muted-foreground">
+                  Debug Database Connection
+                </Button>
+              </div>
+
+              <Dialog open={isDebugOpen} onOpenChange={setIsDebugOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Database Diagnostics</DialogTitle>
+                    <DialogDescription>Checking connection to Supabase tables.</DialogDescription>
+                  </DialogHeader>
+                  <div className="max-h-60 overflow-y-auto font-mono text-xs bg-muted p-2 rounded">
+                    {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         ) : (
