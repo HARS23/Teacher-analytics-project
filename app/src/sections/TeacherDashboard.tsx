@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { classroomService } from '@/services/classroomService';
+import { LoadingScreen } from '@/components/Loading';
 import type { Classroom } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,8 +13,8 @@ import { toast } from 'sonner';
 import {
   BookOpen, Users, ClipboardList, Target, Plus, Sun, Zap, Lightbulb,
   Copy, Check, UserCircle, CheckCircle, MessageCircle, HelpCircle,
-  Trash2, FileQuestion, Timer, ListOrdered, TrendingUp, Award, ArrowRight,
-  LogOut, GraduationCap, Star
+  Trash2, FileQuestion, Timer, ListOrdered, TrendingUp, Award,
+  LogOut, GraduationCap, Star, ArrowRight
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
@@ -22,6 +23,7 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
 
   const [teacherClassrooms, setTeacherClassrooms] = useState<Classroom[]>([]);
   const [studentNameMap, setStudentNameMap] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   // Create Classroom Dialog
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -62,10 +64,8 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
 
   useEffect(() => {
     const loadClassrooms = async () => {
-      if (!currentUser) {
-        setTeacherClassrooms([]);
-        return;
-      }
+      if (!currentUser) return;
+      setIsLoading(true);
       const classrooms = await getTeacherClassrooms();
       setTeacherClassrooms(classrooms);
 
@@ -75,6 +75,7 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
         const names = await classroomService.getStudentNames(allStudentEmails);
         setStudentNameMap(names);
       }
+      setIsLoading(false);
     };
     loadClassrooms();
   }, [currentUser, getTeacherClassrooms]);
@@ -258,6 +259,10 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
     const total = attempts.reduce((sum: number, a) => sum + (a.score / a.totalQuestions) * 100, 0);
     return Math.round(total / attempts.length);
   };
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F6E7 0%, #E7E6E1 100%)' }}>

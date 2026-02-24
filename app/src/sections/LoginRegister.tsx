@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GraduationCap, Mail, Lock, User, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingScreen } from '@/components/Loading';
 
 export function LoginRegister() {
   const { login, sendVerificationEmail, completeProfile, isProfileIncomplete, loading } = useAuth();
@@ -79,11 +80,7 @@ export function LoginRegister() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6E7' }}>
-        <p style={{ color: '#537791' }}>Loading...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (isProfileIncomplete) {

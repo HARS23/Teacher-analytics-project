@@ -7,38 +7,39 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { 
-  GraduationCap, Users, BookOpen, ArrowRight, LogOut, CheckCircle, 
-  Target, Lightbulb, Zap, MessageCircle, FileQuestion, 
+import {
+  GraduationCap, Users, BookOpen, ArrowRight, LogOut, CheckCircle,
+  Target, Lightbulb, Zap, MessageCircle, FileQuestion,
   CheckSquare, Hourglass, Trophy, Bookmark, Rocket, Gem,
   Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingScreen } from '@/components/Loading';
 
 interface StudentDashboardProps {
   onClassroomSelect: (classroomId: string) => void;
 }
 
 export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
-  const { 
-    currentUser, 
-    logout, 
-    joinClassroom, 
+  const {
+    currentUser,
+    logout,
+    joinClassroom,
     getStudentClassrooms
   } = useAuth();
-  
+
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const [classroomCode, setClassroomCode] = useState('');
   const [studentClassrooms, setStudentClassrooms] = useState<Classroom[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadClassrooms = async () => {
-      if (!currentUser) {
-        setStudentClassrooms([]);
-        return;
-      }
+      if (!currentUser) return;
+      setIsLoading(true);
       const classrooms = await getStudentClassrooms();
       setStudentClassrooms(classrooms);
+      setIsLoading(false);
     };
     loadClassrooms();
   }, [currentUser, getStudentClassrooms]);
@@ -80,6 +81,10 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
     return 0;
   };
 
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F6E7 0%, #E7E6E1 100%)' }}>
       {/* Header */}
@@ -96,7 +101,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
               </div>
             </div>
             <Button variant="outline" onClick={logout} className="gap-2 border-0 hover:shadow-md transition-shadow"
-                    style={{ background: '#E7E6E1', color: '#537791' }}>
+              style={{ background: '#E7E6E1', color: '#537791' }}>
               <LogOut className="w-4 h-4" />
               Logout
             </Button>
@@ -160,7 +165,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Avg Score</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {studentClassrooms.length > 0 
+                    {studentClassrooms.length > 0
                       ? Math.round(studentClassrooms.reduce((sum: number, c: Classroom) => sum + getTotalQuizScore(c.id), 0) / studentClassrooms.length)
                       : 0}%
                   </p>
@@ -175,7 +180,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
           <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
-                      style={{ background: '#537791' }}>
+                style={{ background: '#537791' }}>
                 <Rocket className="w-4 h-4" />
                 Join Classroom
               </Button>
@@ -206,7 +211,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)}
-                        style={{ borderColor: '#C1C0B9', color: '#537791' }}>
+                  style={{ borderColor: '#C1C0B9', color: '#537791' }}>
                   Cancel
                 </Button>
                 <Button onClick={handleJoinClassroom} className="text-white" style={{ background: '#537791' }}>
@@ -241,7 +246,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
               const pendingQuizzes = getPendingQuizzes(classroom.id);
               const completedQuizzes = getCompletedQuizzes(classroom.id);
               const avgScore = getTotalQuizScore(classroom.id);
-              
+
               return (
                 <Card key={classroom.id} className="overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-shadow" style={{ background: '#F7F6E7' }}>
                   <CardHeader className="pb-4" style={{ background: '#E7E6E1' }}>
@@ -271,7 +276,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                     <p className="text-sm mb-4 line-clamp-2" style={{ color: '#C1C0B9' }}>
                       {classroom.description || 'No description provided'}
                     </p>
-                    
+
                     {/* Stats Row */}
                     <div className="flex items-center gap-3 mb-4 text-sm flex-wrap">
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md" style={{ background: '#E7E6E1' }}>
@@ -294,14 +299,15 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
 
                     {/* Status Badges */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                      <span className={`text-xs px-3 py-1.5 rounded-full flex items-center gap-1 ${
-                        feedbackSubmitted 
-                          ? '' 
-                          : ''
-                      }`}
-                      style={{ background: feedbackSubmitted ? '#E7E6E1' : '#F7F6E7', 
-                               color: feedbackSubmitted ? '#537791' : '#C1C0B9',
-                               border: '1px solid #E7E6E1' }}>
+                      <span className={`text-xs px-3 py-1.5 rounded-full flex items-center gap-1 ${feedbackSubmitted
+                        ? ''
+                        : ''
+                        }`}
+                        style={{
+                          background: feedbackSubmitted ? '#E7E6E1' : '#F7F6E7',
+                          color: feedbackSubmitted ? '#537791' : '#C1C0B9',
+                          border: '1px solid #E7E6E1'
+                        }}>
                         {feedbackSubmitted ? (
                           <><CheckSquare className="w-3 h-3" /> Feedback Done</>
                         ) : (
@@ -309,8 +315,8 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                         )}
                       </span>
                       {pendingQuizzes > 0 && (
-                        <span className="text-xs px-3 py-1.5 rounded-full flex items-center gap-1" 
-                              style={{ background: '#E7E6E1', color: '#537791', border: '1px solid #C1C0B9' }}>
+                        <span className="text-xs px-3 py-1.5 rounded-full flex items-center gap-1"
+                          style={{ background: '#E7E6E1', color: '#537791', border: '1px solid #C1C0B9' }}>
                           <Target className="w-3 h-3" /> {pendingQuizzes} Quiz Pending
                         </span>
                       )}
@@ -339,8 +345,8 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                       </div>
                     )}
 
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="w-full gap-2 border-0 hover:shadow-sm transition-shadow"
                       style={{ background: '#E7E6E1', color: '#537791' }}
                       onClick={() => onClassroomSelect(classroom.id)}

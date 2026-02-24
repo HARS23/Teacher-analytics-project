@@ -1,3 +1,4 @@
+import { LoadingScreen } from '@/components/Loading';
 import { useAuth } from '@/context/AuthContext';
 import { LoginRegister } from '@/sections/LoginRegister';
 import { TeacherDashboard } from '@/sections/TeacherDashboard';
@@ -25,11 +26,7 @@ function App() {
   }, [isAuthenticated, currentUser]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6E7' }}>
-        <p style={{ color: '#537791' }}>Loading...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   const handleClassroomSelect = (classroomId: string) => {

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { LoadingScreen } from '@/components/Loading';
 
 interface ClassroomPageProps {
   classroomId: string;
@@ -45,10 +46,11 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
   const [quizScore, setQuizScore] = useState<{ score: number; total: number } | null>(null);
 
   const [classroom, setClassroom] = useState<Classroom | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const load = async () => {
       if (!currentUser) return;
-
+      setIsLoading(true);
       let classrooms: Classroom[] = [];
       if (currentUser.role === 'teacher') {
         classrooms = await getTeacherClassrooms();
@@ -58,6 +60,7 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
 
       const found = classrooms.find(c => c.id === classroomId);
       setClassroom(found || null);
+      setIsLoading(false);
     };
     load();
   }, [classroomId, currentUser, getTeacherClassrooms, getStudentClassrooms]);
@@ -97,6 +100,10 @@ export function ClassroomPage({ classroomId, onBack }: ClassroomPageProps) {
       return () => clearInterval(timer);
     }
   }, [activeQuiz, quizTimeLeft, quizCompleted]);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   if (!classroom || !currentUser) {
     return (
