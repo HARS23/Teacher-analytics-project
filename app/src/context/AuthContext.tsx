@@ -6,8 +6,12 @@ import type { User, UserRole, Classroom } from '@/types';
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
+  isProfileIncomplete: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   register: (email: string, password: string, role: UserRole, name: string) => Promise<{ success: boolean; message: string }>;
+  sendVerificationEmail: (email: string) => Promise<{ success: boolean; message: string }>;
+  completeProfile: (name: string, role: UserRole, password?: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   createClassroom: (name: string, subject: string, description: string) => Promise<{ success: boolean; classroom?: Classroom; message: string }>;
   joinClassroom: (code: string) => Promise<{ success: boolean; message: string }>;
@@ -29,50 +33,140 @@ const generateCode = () => {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('ftosa_currentUser');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleAuthChange(session?.user ?? null);
+    });
+
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleAuthChange(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('ftosa_currentUser', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('ftosa_currentUser');
+  const handleAuthChange = async (supabaseUser: any) => {
+    if (!supabaseUser) {
+      setCurrentUser(null);
+      setIsProfileIncomplete(false);
+      setLoading(false);
+      return;
     }
-  }, [currentUser]);
+
+    // Check if user exists in our 'users' table
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', supabaseUser.email)
+      .single();
+
+    if (error || !data) {
+      // User is authenticated via Supabase but has no profile in our table
+      setIsProfileIncomplete(true);
+      setCurrentUser(null); // Don't allow access yet
+    } else {
+      setCurrentUser(data);
+      setIsProfileIncomplete(false);
+    }
+    setLoading(false);
+  };
 
   // ================= AUTH =================
 
+  const sendVerificationEmail = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: 'Verification email sent! Please check your inbox.' };
+  };
+
+  const completeProfile = async (name: string, role: UserRole, password?: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, message: 'User not found' };
+
+    // Update password if provided
+    if (password) {
+      const { error: pwError } = await supabase.auth.updateUser({ password });
+      if (pwError) return { success: false, message: pwError.message };
+    }
+
+    // Insert into our users table
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{
+        email: user.email,
+        password: password || 'verified-via-magic-link', // Keep for backward compatibility if needed
+        role,
+        name
+      }])
+      .select()
+      .single();
+
+    if (error) return { success: false, message: 'Failed to create profile: ' + error.message };
+
+    setCurrentUser(data);
+    setIsProfileIncomplete(false);
+    return { success: true, message: 'Profile completed successfully!' };
+  };
+
   const register = async (email: string, password: string, role: UserRole, name: string) => {
+    // Legacy register - creating both auth and table entries
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) return { success: false, message: authError.message };
+
     const { data, error } = await supabase
       .from('users')
       .insert([{ email, password, role, name }])
       .select();
 
-    if (error || !data) return { success: false, message: 'Registration failed' };
+    if (error || !data) return { success: false, message: 'Registration failed in users table' };
 
     setCurrentUser(data[0]);
     return { success: true, message: 'Registration successful!' };
   };
 
   const login = async (email: string, password: string) => {
+    // Sign in to Supabase Auth
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) return { success: false, message: authError.message };
+
+    // Get table data
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('email', email)
-      .eq('password', password);
+      .single();
 
-    if (error || !data || data.length === 0) {
-      return { success: false, message: 'Invalid email or password' };
+    if (error || !data) {
+      return { success: false, message: 'User profile not found' };
     }
 
-    setCurrentUser(data[0]);
+    setCurrentUser(data);
     return { success: true, message: 'Login successful!' };
   };
 
-  const logout = () => setCurrentUser(null);
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+  };
 
   // ================= CLASSROOM =================
 
@@ -128,8 +222,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       currentUser,
       isAuthenticated: !!currentUser,
+      isProfileIncomplete,
+      loading,
       login,
       register,
+      sendVerificationEmail,
+      completeProfile,
       logout,
       createClassroom,
       joinClassroom,

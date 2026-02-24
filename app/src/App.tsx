@@ -8,9 +8,17 @@ import { useState, useEffect } from 'react';
 export type View = 'login' | 'teacher-dashboard' | 'student-dashboard' | 'classroom';
 
 function App() {
-  const { isAuthenticated, currentUser } = useAuth();
+  const { isAuthenticated, currentUser, loading } = useAuth();
   const [currentView, setCurrentView] = useState<View>('login');
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6E7' }}>
+        <p style={{ color: '#537791' }}>Loading...</p>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (isAuthenticated && currentUser) {
@@ -50,7 +58,7 @@ function App() {
         if (selectedClassroomId) {
           return <ClassroomPage classroomId={selectedClassroomId} onBack={handleBack} />;
         }
-        return currentUser?.role === 'teacher' 
+        return currentUser?.role === 'teacher'
           ? <TeacherDashboard onClassroomSelect={handleClassroomSelect} />
           : <StudentDashboard onClassroomSelect={handleClassroomSelect} />;
       default:
