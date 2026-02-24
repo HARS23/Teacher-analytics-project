@@ -33,7 +33,8 @@ export function LoginRegister() {
       toast.error('Please fill in all fields');
       return;
     }
-    const result = await login(loginEmail, loginPassword);
+    const normalizedEmail = loginEmail.trim().toLowerCase();
+    const result = await login(normalizedEmail, loginPassword);
     if (result.success) {
       toast.success(result.message);
     } else {
@@ -47,8 +48,10 @@ export function LoginRegister() {
       toast.error('Please enter your email');
       return;
     }
-    const result = await sendVerificationEmail(registerEmail);
+    const normalizedEmail = registerEmail.trim().toLowerCase();
+    const result = await sendVerificationEmail(normalizedEmail);
     if (result.success) {
+      setRegisterEmail(normalizedEmail); // Keep the trimmed version
       setVerificationSent(true);
       toast.success(result.message);
     } else {
@@ -239,13 +242,44 @@ export function LoginRegister() {
                       />
                     </div>
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
-                    style={{ background: '#537791' }}
-                  >
-                    Sign In
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      type="submit"
+                      className="w-full text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
+                      style={{ background: '#537791' }}
+                    >
+                      Sign In
+                    </Button>
+                    <div className="relative my-2">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" style={{ borderColor: '#E7E6E1' }} />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-[#F7F6E7] px-2 text-muted-foreground" style={{ color: '#C1C0B9' }}>Or</span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-2"
+                      style={{ borderColor: '#537791', color: '#537791' }}
+                      onClick={async () => {
+                        if (!loginEmail) {
+                          toast.error('Please enter your email first');
+                          return;
+                        }
+                        const result = await sendVerificationEmail(loginEmail);
+                        if (result.success) {
+                          toast.success('Magic link sent to ' + loginEmail);
+                        } else {
+                          toast.error(result.message);
+                        }
+                      }}
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Login with Magic Link
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>

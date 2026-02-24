@@ -59,16 +59,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Check if user exists in our 'users' table
+    const normalizedEmail = supabaseUser.email.trim().toLowerCase();
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', supabaseUser.email)
+      .eq('email', normalizedEmail)
       .single();
 
     if (error || !data) {
-      // User is authenticated via Supabase but has no profile in our table
+      console.log('User profile not found for:', normalizedEmail);
       setIsProfileIncomplete(true);
-      setCurrentUser(null); // Don't allow access yet
+      setCurrentUser(null);
     } else {
       setCurrentUser(data);
       setIsProfileIncomplete(false);
@@ -79,8 +80,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ================= AUTH =================
 
   const sendVerificationEmail = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: normalizedEmail,
       options: {
         emailRedirectTo: window.location.origin,
       },
@@ -94,35 +96,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, message: 'User not found' };
 
-    // Update password if provided
+    const normalizedEmail = user.email?.trim().toLowerCase();
+    if (!normalizedEmail) return { success: false, message: 'Email not found in auth session' };
+
+    // Update password in Supabase Auth if provided
     if (password) {
       const { error: pwError } = await supabase.auth.updateUser({ password });
-      if (pwError) return { success: false, message: pwError.message };
+      if (pwError && !pwError.message.includes('different from the old password')) {
+        console.error('Failed to update Supabase Auth password:', pwError);
+        return { success: false, message: 'Failed to set password: ' + pwError.message };
+      }
     }
 
-    // Insert into our users table
+    // Upsert into our users table
     const { data, error } = await supabase
       .from('users')
-      .insert([{
-        email: user.email,
-        password: password || 'verified-via-magic-link', // Keep for backward compatibility if needed
+      .upsert([{
+        email: normalizedEmail,
+        password: password || 'auth-user',
         role,
         name
-      }])
+      }], { onConflict: 'email' })
       .select()
       .single();
 
-    if (error) return { success: false, message: 'Failed to create profile: ' + error.message };
+    if (error) {
+      console.error('ERROR in completeProfile (profile upsert):', error);
+      return { success: false, message: 'Failed to create profile: ' + error.message };
+    }
 
+    console.log('Profile completion success:', data);
     setCurrentUser(data);
     setIsProfileIncomplete(false);
     return { success: true, message: 'Profile completed successfully!' };
   };
 
   const register = async (email: string, password: string, role: UserRole, name: string) => {
-    // Legacy register - creating both auth and table entries
+    const normalizedEmail = email.trim().toLowerCase();
     const { error: authError } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
     });
 
@@ -130,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data, error } = await supabase
       .from('users')
-      .insert([{ email, password, role, name }])
+      .upsert([{ email: normalizedEmail, password, role, name }], { onConflict: 'email' })
       .select();
 
     if (error || !data) return { success: false, message: 'Registration failed in users table' };
@@ -140,23 +152,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    // Sign in to Supabase Auth
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Try standard Supabase Auth login
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 
-    if (authError) return { success: false, message: authError.message };
+    if (authError) {
+      console.error('DEBUG: Supabase Login Error:', authError);
 
-    // Get table data
+      // 2. Check for "Rate Limit Exceeded"
+      if (authError.message.toLowerCase().includes('rate limit')) {
+        return {
+          success: false,
+          message: 'Rate limit exceeded. Please wait a few minutes or use "Login with Magic Link".'
+        };
+      }
+
+      // 3. Fallback: Check public.users for legacy plain-text credentials
+      // This helps users migrate from old insecure logic to secure Supabase Auth.
+      const { data: legacyUser, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .eq('password', password) // Checking the plain-text field from your screenshot
+        .single();
+
+      if (!dbError && legacyUser) {
+        return {
+          success: false,
+          message: 'Legacy account detected! For security, please use "Login with Magic Link" once to activate your secure session.'
+        };
+      }
+
+      return { success: false, message: authError.message };
+    }
+
+    // 4. Auth success, get table data for profile
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single();
 
     if (error || !data) {
-      return { success: false, message: 'User profile not found' };
+      return { success: false, message: 'User profile not found. Please complete your registration.' };
     }
 
     setCurrentUser(data);
