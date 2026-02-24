@@ -12,14 +12,6 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('login');
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6E7' }}>
-        <p style={{ color: '#537791' }}>Loading...</p>
-      </div>
-    );
-  }
-
   useEffect(() => {
     if (isAuthenticated && currentUser) {
       if (currentUser.role === 'teacher') {
@@ -31,6 +23,14 @@ function App() {
       setCurrentView('login');
     }
   }, [isAuthenticated, currentUser]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F7F6E7' }}>
+        <p style={{ color: '#537791' }}>Loading...</p>
+      </div>
+    );
+  }
 
   const handleClassroomSelect = (classroomId: string) => {
     setSelectedClassroomId(classroomId);
