@@ -11,11 +11,13 @@ import { toast } from 'sonner';
 import { LoadingScreen } from '@/components/Loading';
 
 export function LoginRegister() {
-  const { login, sendVerificationEmail, completeProfile, isProfileIncomplete, loading } = useAuth();
+  const { login, sendVerificationEmail, sendPasswordReset, completeProfile, isProfileIncomplete, loading } = useAuth();
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
 
   // Register (Verification) form state
   const [registerEmail, setRegisterEmail] = useState('');
@@ -37,6 +39,24 @@ export function LoginRegister() {
     const result = await login(normalizedEmail, loginPassword);
     if (result.success) {
       toast.success(result.message);
+    } else if (result.isLegacy) {
+      // Highlight the forgot password option for legacy accounts
+      setShowForgotPassword(true);
+      toast.error(result.message, { duration: 6000 });
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!loginEmail) {
+      toast.error('Please enter your email address first');
+      return;
+    }
+    const result = await sendPasswordReset(loginEmail.trim().toLowerCase());
+    if (result.success) {
+      setForgotPasswordSent(true);
+      toast.success(result.message, { duration: 8000 });
     } else {
       toast.error(result.message);
     }
@@ -250,35 +270,26 @@ export function LoginRegister() {
                     >
                       Sign In
                     </Button>
-                    <div className="relative my-2">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" style={{ borderColor: '#E7E6E1' }} />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-[#F7F6E7] px-2 text-muted-foreground" style={{ color: '#C1C0B9' }}>Or</span>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full border-2"
-                      style={{ borderColor: '#537791', color: '#537791' }}
-                      onClick={async () => {
-                        if (!loginEmail) {
-                          toast.error('Please enter your email first');
-                          return;
-                        }
-                        const result = await sendVerificationEmail(loginEmail);
-                        if (result.success) {
-                          toast.success('Magic link sent to ' + loginEmail);
-                        } else {
-                          toast.error(result.message);
-                        }
-                      }}
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Login with Magic Link
-                    </Button>
+
+                    {/* Forgot Password — shown always but highlighted for legacy users */}
+                    {forgotPasswordSent ? (
+                      <p className="text-center text-sm py-1" style={{ color: '#537791' }}>
+                        ✅ Reset link sent! Check your inbox.
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className={`text-sm text-center w-full py-1 rounded transition-colors ${
+                          showForgotPassword
+                            ? 'font-semibold underline'
+                            : 'opacity-70 hover:opacity-100'
+                        }`}
+                        style={{ color: '#537791', background: showForgotPassword ? '#E7E6E1' : 'transparent' }}
+                      >
+                        {showForgotPassword ? '👉 Forgot Password? Click here to reset it' : 'Forgot Password?'}
+                      </button>
+                    )}
                   </div>
                 </form>
               </CardContent>

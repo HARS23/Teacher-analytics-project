@@ -8,9 +8,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isProfileIncomplete: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string; isLegacy?: boolean }>;
   register: (email: string, password: string, role: UserRole, name: string) => Promise<{ success: boolean; message: string }>;
   sendVerificationEmail: (email: string) => Promise<{ success: boolean; message: string }>;
+  sendPasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
   completeProfile: (name: string, role: UserRole, password?: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   createClassroom: (name: string, subject: string, description: string) => Promise<{ success: boolean; classroom?: Classroom; message: string }>;
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ================= AUTH =================
 
+  // Used during new-user registration flow (sends OTP / magic link to verify email)
   const sendVerificationEmail = async (email: string) => {
     const normalizedEmail = email.trim().toLowerCase();
     const { error } = await supabase.auth.signInWithOtp({
@@ -90,6 +92,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) return { success: false, message: error.message };
     return { success: true, message: 'Verification email sent! Please check your inbox.' };
+  };
+
+  // Used as "Forgot Password" — sends a magic link so the user can log in and set a new password
+  const sendPasswordReset = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // First check the user actually exists in our users table
+    const { data: userExists } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', normalizedEmail)
+      .single();
+
+    if (!userExists) {
+      return { success: false, message: 'No account found with that email address.' };
+    }
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: 'Password reset link sent! Check your inbox and click the link to log in, then set a new password.' };
   };
 
   const completeProfile = async (name: string, role: UserRole, password?: string) => {
@@ -151,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: true, message: 'Registration successful!' };
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; message: string; isLegacy?: boolean }> => {
     const normalizedEmail = email.trim().toLowerCase();
 
     // 1. Try standard Supabase Auth login
@@ -163,34 +191,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (authError) {
       console.error('DEBUG: Supabase Login Error:', authError);
 
-      // 2. Check for "Rate Limit Exceeded"
+      // 2. Check for rate limit
       if (authError.message.toLowerCase().includes('rate limit')) {
         return {
           success: false,
-          message: 'Rate limit exceeded. Please wait a few minutes or use "Login with Magic Link".'
+          message: 'Too many attempts. Please wait a few minutes and try again.',
         };
       }
 
-      // 3. Fallback: Check public.users for legacy plain-text credentials
-      // This helps users migrate from old insecure logic to secure Supabase Auth.
-      const { data: legacyUser, error: dbError } = await supabase
+      // 3. Check if this is a legacy account (exists in users table with plain-text password)
+      //    These users were created before Supabase Auth was set up.
+      const { data: legacyUser } = await supabase
         .from('users')
-        .select('*')
+        .select('email')
         .eq('email', normalizedEmail)
-        .eq('password', password) // Checking the plain-text field from your screenshot
         .single();
 
-      if (!dbError && legacyUser) {
+      if (legacyUser) {
+        // The account exists but has no Supabase Auth password yet.
+        // The user should use "Forgot Password" to get a magic link and then set a real password.
         return {
           success: false,
-          message: 'Legacy account detected! For security, please use "Login with Magic Link" once to activate your secure session.'
+          isLegacy: true,
+          message: 'Your account needs a password reset. Please click "Forgot Password" below to receive a login link and set a new password.',
         };
       }
 
-      return { success: false, message: authError.message };
+      // 4. Generic auth failure (wrong password, user does not exist, etc.)
+      return { success: false, message: 'Invalid email or password. Please try again.' };
     }
 
-    // 4. Auth success, get table data for profile
+    // 5. Auth success — fetch profile from users table
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -198,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (error || !data) {
-      return { success: false, message: 'User profile not found. Please complete your registration.' };
+      return { success: false, message: 'User profile not found. Please contact your administrator.' };
     }
 
     setCurrentUser(data);
@@ -269,6 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       register,
       sendVerificationEmail,
+      sendPasswordReset,
       completeProfile,
       logout,
       createClassroom,

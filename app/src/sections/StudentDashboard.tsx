@@ -68,17 +68,59 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
     }
   };
 
-  // Quiz and feedback features temporarily disabled
-  const getPendingQuizzes = (_classroomId: string) => {
-    return 0;
+  // ── Derived stats (computed from already-fetched classroom data) ──
+
+  // Feedback Done: number of classrooms where this student has submitted at least one feedback
+  const feedbackDoneCount = studentClassrooms.filter(c =>
+    c.feedbacks.some(f => f.studentId === currentUser?.email)
+  ).length;
+
+  // All quiz attempts by this student across every classroom
+  const myQuizAttempts = studentClassrooms.flatMap(c =>
+    c.quizAttempts.filter(a => a.studentId === currentUser?.email)
+  );
+
+  // Quizzes Taken: total attempt count
+  const quizzesTakenCount = myQuizAttempts.length;
+
+  // Avg Score: average percentage score across all attempts
+  const avgScore = myQuizAttempts.length > 0
+    ? Math.round(
+        myQuizAttempts.reduce((sum, a) =>
+          sum + (a.totalQuestions > 0 ? (a.score / a.totalQuestions) * 100 : 0), 0
+        ) / myQuizAttempts.length
+      )
+    : 0;
+
+  // Per-classroom helper: pending quizzes = quizzes with no attempt from this student
+  const getPendingQuizzes = (classroomId: string) => {
+    const classroom = studentClassrooms.find(c => c.id === classroomId);
+    if (!classroom) return 0;
+    return classroom.quizzes.filter(q =>
+      !classroom.quizAttempts.some(
+        a => a.quizId === q.id && a.studentId === currentUser?.email
+      )
+    ).length;
   };
 
-  const getCompletedQuizzes = (_classroomId: string) => {
-    return 0;
+  // Per-classroom helper: completed quizzes count
+  const getCompletedQuizzes = (classroomId: string) => {
+    const classroom = studentClassrooms.find(c => c.id === classroomId);
+    if (!classroom) return 0;
+    return classroom.quizAttempts.filter(a => a.studentId === currentUser?.email).length;
   };
 
-  const getTotalQuizScore = (_classroomId: string) => {
-    return 0;
+  // Per-classroom helper: avg score in that classroom
+  const getTotalQuizScore = (classroomId: string) => {
+    const classroom = studentClassrooms.find(c => c.id === classroomId);
+    if (!classroom) return 0;
+    const attempts = classroom.quizAttempts.filter(a => a.studentId === currentUser?.email);
+    if (attempts.length === 0) return 0;
+    return Math.round(
+      attempts.reduce((sum, a) =>
+        sum + (a.totalQuestions > 0 ? (a.score / a.totalQuestions) * 100 : 0), 0
+      ) / attempts.length
+    );
   };
 
   if (isLoading) {
@@ -135,7 +177,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Feedback Done</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    0
+                    {feedbackDoneCount}
                   </p>
                 </div>
               </div>
@@ -150,7 +192,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Quizzes Taken</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {studentClassrooms.reduce((sum: number, c: Classroom) => sum + getCompletedQuizzes(c.id), 0)}
+                    {quizzesTakenCount}
                   </p>
                 </div>
               </div>
@@ -165,9 +207,7 @@ export function StudentDashboard({ onClassroomSelect }: StudentDashboardProps) {
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#C1C0B9' }}>Avg Score</p>
                   <p className="text-2xl font-bold" style={{ color: '#537791' }}>
-                    {studentClassrooms.length > 0
-                      ? Math.round(studentClassrooms.reduce((sum: number, c: Classroom) => sum + getTotalQuizScore(c.id), 0) / studentClassrooms.length)
-                      : 0}%
+                    {avgScore}%
                   </p>
                 </div>
               </div>
