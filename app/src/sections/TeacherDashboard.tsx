@@ -14,9 +14,11 @@ import {
   BookOpen, Users, ClipboardList, Target, Plus, Sun, Zap, Lightbulb,
   Copy, Check, UserCircle, CheckCircle, MessageCircle, HelpCircle,
   Trash2, FileQuestion, Timer, ListOrdered, TrendingUp, Award,
-  LogOut, GraduationCap, Star, ArrowRight
+  LogOut, GraduationCap, Star, ArrowRight, Activity
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 
 export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id: string) => void }) {
   const { currentUser, logout, createClassroom, getTeacherClassrooms } = useAuth();
@@ -353,16 +355,27 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
           </Card>
         </div>
 
-        {/* Create Classroom Button */}
-        <div className="mb-6">
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2 text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
-                style={{ background: '#537791' }}>
-                <Plus className="w-4 h-4" />
-                Create New Classroom
-              </Button>
-            </DialogTrigger>
+        <Tabs defaultValue="classrooms" className="w-full">
+          <div className="flex items-center justify-between mb-6">
+            <TabsList className="bg-[#E7E6E1]">
+              <TabsTrigger value="classrooms" className="data-[state=active]:bg-[#537791] data-[state=active]:text-white">
+                <Sun className="w-4 h-4 mr-2" />
+                My Classrooms
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="data-[state=active]:bg-[#537791] data-[state=active]:text-white">
+                <Activity className="w-4 h-4 mr-2" />
+                ML Analytics
+              </TabsTrigger>
+            </TabsList>
+
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 text-white font-semibold shadow-md hover:shadow-lg transition-shadow"
+                  style={{ background: '#537791' }}>
+                  <Plus className="w-4 h-4" />
+                  Create New Classroom
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md" style={{ background: '#F7F6E7' }}>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2" style={{ color: '#537791' }}>
@@ -422,8 +435,9 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
+          </div>
 
+          <TabsContent value="classrooms" className="mt-0">
         {/* Classrooms Grid */}
         {teacherClassrooms.length === 0 ? (
           <Card className="text-center py-16 border-0 shadow-lg" style={{ background: '#F7F6E7' }}>
@@ -843,6 +857,13 @@ export function TeacherDashboard({ onClassroomSelect }: { onClassroomSelect: (id
             })}
           </div>
         )}
+        </TabsContent>
+
+        {/* Analytics Tab */}
+        <TabsContent value="analytics" className="mt-0">
+           <AnalyticsDashboard />
+        </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

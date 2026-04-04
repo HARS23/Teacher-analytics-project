@@ -1,0 +1,12 @@
+requests
+scikit-learn
+numpy
+pandas
+matplotlib
+seaborn
+textblob
+flask
+flask-cors
+python-dotenv
+scipy
+gunicorn
